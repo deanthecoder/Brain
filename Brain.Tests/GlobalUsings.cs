@@ -8,17 +8,4 @@
 //
 // THE SOFTWARE IS PROVIDED AS IS, WITHOUT WARRANTY OF ANY KIND.
 
-using DTC.Core.Extensions;
-using System.Reflection;
-
-namespace Brain.Cli.Storage;
-
-internal static class BrainPaths
-{
-    public static DirectoryInfo GetHome(string path = null)
-    {
-        return path == null
-            ? Assembly.GetEntryAssembly().GetAppSettingsPath()
-            : new DirectoryInfo(path);
-    }
-}
+global using NUnit.Framework;

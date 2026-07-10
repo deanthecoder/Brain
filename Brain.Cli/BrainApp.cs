@@ -21,12 +21,9 @@ internal sealed class BrainApp
 {
     private static readonly ConsoleMarkdown Markdown = new();
 
-    private readonly BrainStore m_store;
+    private BrainStore m_store;
 
-    public BrainApp()
-        : this(new BrainStore(BrainPaths.GetHome()))
-    {
-    }
+    public BrainApp() { }
 
     public BrainApp(BrainStore store)
     {
@@ -35,23 +32,26 @@ internal sealed class BrainApp
 
     public int Run(string[] args)
     {
-        if (args.Length == 0 || IsHelp(args[0]))
-        {
-            PrintHelp();
-            return 0;
-        }
-
-        var json = RemoveFlag(args, "--json", out args);
-        if (args.Length == 0)
-        {
-            PrintHelp();
-            return 0;
-        }
-
-        var command = args[0].ToLowerInvariant();
-
         try
         {
+            var home = RemoveOption(args, "--home", out args);
+            if (args.Length == 0 || IsHelp(args[0]))
+            {
+                PrintHelp();
+                return 0;
+            }
+
+            var json = RemoveFlag(args, "--json", out args);
+            if (args.Length == 0)
+            {
+                PrintHelp();
+                return 0;
+            }
+
+            m_store ??= new BrainStore(BrainPaths.GetHome(home));
+
+            var command = args[0].ToLowerInvariant();
+
             return command switch
             {
                 "add" => Add(args[1..], json),
@@ -269,6 +269,8 @@ internal sealed class BrainApp
             | `brain people` | Show known people |
             | `brain path` | Show the storage path |
 
+            `--home <path>` uses a specific storage directory.
+
             ## Conventions
 
             - `@Erica` tags Erica as a person and remembers the name.
@@ -309,6 +311,29 @@ internal sealed class BrainApp
 
         remaining = kept.ToArray();
         return found;
+    }
+
+    private static string RemoveOption(string[] args, string option, out string[] remaining)
+    {
+        var value = default(string);
+        var kept = new List<string>();
+
+        for (var index = 0; index < args.Length; index++)
+        {
+            if (!string.Equals(args[index], option, StringComparison.OrdinalIgnoreCase))
+            {
+                kept.Add(args[index]);
+                continue;
+            }
+
+            if (value != null || ++index >= args.Length || args[index].StartsWith("--", StringComparison.Ordinal))
+                throw new BrainUsageException($"{option} expects a directory path.");
+
+            value = args[index];
+        }
+
+        remaining = kept.ToArray();
+        return value;
     }
 
     private static void WriteJson<T>(T value)
