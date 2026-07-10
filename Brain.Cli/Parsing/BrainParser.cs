@@ -22,7 +22,7 @@ internal static partial class BrainParser
 
         foreach (var knownPerson in knownPeople)
         {
-            if (ContainsWord(text, knownPerson))
+            if (!string.Equals(knownPerson, "todo", StringComparison.OrdinalIgnoreCase) && ContainsWord(text, knownPerson))
                 people.Add(knownPerson);
         }
 
@@ -44,7 +44,7 @@ internal static partial class BrainParser
 
         var (context, reason) = DetermineContext(text, references);
 
-        return new BrainAnalysis(people, explicitPeople, references, urls, emailAddresses, context, reason);
+        return new BrainAnalysis(people, explicitPeople, references, urls, emailAddresses, context, reason, TodoTagRegex().IsMatch(text));
     }
 
     private static HashSet<string> FindExplicitPeople(string text)
@@ -59,7 +59,7 @@ internal static partial class BrainParser
 
             name = name.Trim();
 
-            if (name.Length > 0)
+            if (name.Length > 0 && !string.Equals(name, "todo", StringComparison.OrdinalIgnoreCase))
                 people.Add(name);
         }
 
@@ -99,4 +99,7 @@ internal static partial class BrainParser
 
     [GeneratedRegex(@"\b(my wife|my husband|my partner|my son|my daughter|mum|mom|dad)\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex PersonalPhraseRegex();
+
+    [GeneratedRegex(@"(?<![\w.])@todo\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex TodoTagRegex();
 }

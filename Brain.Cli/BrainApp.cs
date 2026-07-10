@@ -75,12 +75,14 @@ internal sealed class BrainApp
                 "recall" or "search" or "find" => Recall(args[1..], json),
                 "recent" => Recent(args[1..], json),
                 "people" => People(json),
+                "todo" or "todos" => Todos(json),
+                "forget" => Forget(args[1..], json),
                 "path" => Path(json),
                 "drive" => Drive(args[1..], json),
                 _ => Add(args, json)
             };
 
-            if (synchroniseAutomatically && IsCaptureCommand(command))
+            if (synchroniseAutomatically && RequiresPush(command))
                 TryPush(synchroniser);
 
             return result;
@@ -112,7 +114,8 @@ internal sealed class BrainApp
             analysis.People.Order(StringComparer.OrdinalIgnoreCase).ToArray(),
             analysis.References.Order(StringComparer.OrdinalIgnoreCase).ToArray(),
             analysis.Urls.Order(StringComparer.OrdinalIgnoreCase).ToArray(),
-            analysis.EmailAddresses.Order(StringComparer.OrdinalIgnoreCase).ToArray());
+            analysis.EmailAddresses.Order(StringComparer.OrdinalIgnoreCase).ToArray(),
+            analysis.IsTodo);
 
         m_store.Append(entry);
 
@@ -139,6 +142,9 @@ internal sealed class BrainApp
 
         if (entry.EmailAddresses.Count > 0)
             Console.WriteLine($"Email addresses: {string.Join(", ", entry.EmailAddresses)}");
+
+        if (entry.IsTodo)
+            Console.WriteLine("Todo: yes");
 
         return 0;
     }
@@ -230,6 +236,50 @@ internal sealed class BrainApp
         return 0;
     }
 
+    private int Todos(bool json)
+    {
+        var entries = m_store.LoadEntries()
+            .Where(x => x.IsTodo)
+            .OrderByDescending(x => x.CreatedAt)
+            .ToArray();
+
+        if (json)
+        {
+            WriteJson(entries);
+            return 0;
+        }
+
+        if (entries.Length == 0)
+        {
+            Console.WriteLine("No todos.");
+            return 0;
+        }
+
+        foreach (var entry in entries)
+        {
+            PrintEntry(entry);
+            Console.WriteLine();
+        }
+
+        return 0;
+    }
+
+    private int Forget(string[] args, bool json)
+    {
+        if (args.Length != 1 || string.IsNullOrWhiteSpace(args[0]))
+            throw new BrainUsageException("Forget expects an entry ID.");
+
+        var id = args[0].Trim();
+        m_store.Forget(id);
+
+        if (json)
+            WriteJson(new { id, forgotten = true });
+        else
+            Console.WriteLine($"Forgotten {id}.");
+
+        return 0;
+    }
+
     private int Path(bool json)
     {
         if (json)
@@ -306,9 +356,9 @@ internal sealed class BrainApp
         return 0;
     }
 
-    private static bool IsCaptureCommand(string command)
+    private static bool RequiresPush(string command)
     {
-        return command is not "recall" and not "search" and not "find" and not "recent" and not "people" and not "path" and not "drive";
+        return command == "forget" || command is not ("recall" or "search" or "find" or "recent" or "people" or "todo" or "todos" or "path" or "drive");
     }
 
     private static void TryPull(IBrainSynchroniser synchroniser)
@@ -353,7 +403,7 @@ internal sealed class BrainApp
         var context = entry.Context == null ? string.Empty : $" [{entry.Context}]";
         var scoreText = score == null ? string.Empty : $"  score {score}";
 
-        Markdown.Write($"**{entry.CreatedAt:yyyy-MM-dd HH:mm}{context}{scoreText}**");
+        Markdown.Write($"**{entry.CreatedAt:yyyy-MM-dd HH:mm}{context}{scoreText}  id {entry.Id}**");
         Console.WriteLine();
         Console.WriteLine(entry.Text);
 
@@ -393,6 +443,8 @@ internal sealed class BrainApp
             | `brain recall <query>` | Search remembered thoughts |
             | `brain recent [count]` | Show recent thoughts |
             | `brain people` | Show known people |
+            | `brain todos` | Show remembered todos |
+            | `brain forget <id>` | Forget an entry |
             | `brain path` | Show the storage path |
             | `brain drive connect <credentials.json>` | Connect a Google Drive account |
             | `brain drive sync` | Sync entries with Google Drive |
@@ -406,6 +458,7 @@ internal sealed class BrainApp
             ## Conventions
 
             - `@Erica` tags Erica as a person and remembers the name.
+            - `@todo` marks a thought as a todo.
             - `PLAT-123` tags a Jira-style reference and implies work context.
             - `https://example.com` tags a URL.
             - `erica@example.com` tags an email address.

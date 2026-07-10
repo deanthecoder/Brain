@@ -17,6 +17,7 @@ namespace Brain.Cli.Storage;
 internal sealed class BrainStore
 {
     private const string EntriesDirectoryName = "entries";
+    private const string ForgottenDirectoryName = "forgotten";
     private const string LegacyEntriesFileName = "entries.jsonl";
     private const string LegacyPeopleFileName = "people.json";
 
@@ -25,12 +26,15 @@ internal sealed class BrainStore
         Home = home;
         Home.Create();
         EntriesDirectory.Create();
+        ForgottenDirectory.Create();
         MigrateLegacyStore();
     }
 
     public DirectoryInfo Home { get; }
 
     private DirectoryInfo EntriesDirectory => Home.GetDir(EntriesDirectoryName);
+
+    private DirectoryInfo ForgottenDirectory => Home.GetDir(ForgottenDirectoryName);
 
     private FileInfo LegacyEntriesFile => Home.GetFile(LegacyEntriesFileName);
 
@@ -43,13 +47,22 @@ internal sealed class BrainStore
 
     public IReadOnlyList<BrainEntry> LoadEntries()
     {
-        return GetEntryFiles().Select(ReadEntry).ToArray();
+        var forgottenIds = GetForgottenFiles()
+            .Select(ReadForgottenEntry)
+            .Select(x => x.Id)
+            .ToHashSet(StringComparer.Ordinal);
+
+        return GetEntryFiles()
+            .Select(ReadEntry)
+            .Where(x => !forgottenIds.Contains(x.Id))
+            .ToArray();
     }
 
     public HashSet<string> LoadPeople()
     {
         return LoadEntries()
             .SelectMany(x => x.People)
+            .Where(x => !string.Equals(x, "todo", StringComparison.OrdinalIgnoreCase))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 
@@ -58,13 +71,39 @@ internal sealed class BrainStore
         return EntriesDirectory.EnumerateFiles("entry-*.json", SearchOption.TopDirectoryOnly);
     }
 
-    public void Import(Stream stream)
+    public IEnumerable<FileInfo> GetSyncFiles()
     {
-        var entry = JsonSerializer.Deserialize<BrainEntry>(stream, BrainJson.Options);
-        if (entry == null)
-            throw new InvalidDataException("The entry file did not contain a Brain entry.");
+        return GetEntryFiles().Concat(GetForgottenFiles());
+    }
 
-        Save(Normalise(entry));
+    public void Forget(string id)
+    {
+        SaveForgottenEntry(new BrainForgottenEntry(id, DateTimeOffset.UtcNow));
+    }
+
+    public void Import(string fileName, Stream stream)
+    {
+        if (fileName.StartsWith("entry-", StringComparison.Ordinal))
+        {
+            var entry = JsonSerializer.Deserialize<BrainEntry>(stream, BrainJson.Options);
+            if (entry == null)
+                throw new InvalidDataException("The entry file did not contain a Brain entry.");
+
+            Save(Normalise(entry));
+            return;
+        }
+
+        if (fileName.StartsWith("forgotten-", StringComparison.Ordinal))
+        {
+            var forgottenEntry = JsonSerializer.Deserialize<BrainForgottenEntry>(stream, BrainJson.Options);
+            if (forgottenEntry == null)
+                throw new InvalidDataException("The forgotten-entry file did not contain a Brain entry ID.");
+
+            SaveForgottenEntry(forgottenEntry);
+            return;
+        }
+
+        throw new InvalidDataException($"The sync file '{fileName}' is not recognised.");
     }
 
     private void Save(BrainEntry entry)
@@ -73,8 +112,22 @@ internal sealed class BrainStore
         if (destination.Exists())
             return;
 
-        var temporary = EntriesDirectory.GetFile($".{entry.Id}.{Guid.NewGuid():N}.tmp");
-        File.WriteAllText(temporary.FullName, JsonSerializer.Serialize(entry, BrainJson.Options) + Environment.NewLine);
+        SaveFile(destination, entry);
+    }
+
+    private void SaveForgottenEntry(BrainForgottenEntry entry)
+    {
+        var destination = ForgottenDirectory.GetFile($"forgotten-{entry.Id}.json");
+        if (destination.Exists())
+            return;
+
+        SaveFile(destination, entry);
+    }
+
+    private void SaveFile(FileInfo destination, object value)
+    {
+        var temporary = destination.Directory.GetFile($".{destination.Name}.{Guid.NewGuid():N}.tmp");
+        File.WriteAllText(temporary.FullName, JsonSerializer.Serialize(value, BrainJson.Options) + Environment.NewLine);
 
         try
         {
@@ -115,6 +168,11 @@ internal sealed class BrainStore
 
     private FileInfo GetEntryFile(string id) => EntriesDirectory.GetFile($"entry-{id}.json");
 
+    private IEnumerable<FileInfo> GetForgottenFiles()
+    {
+        return ForgottenDirectory.EnumerateFiles("forgotten-*.json", SearchOption.TopDirectoryOnly);
+    }
+
     private static BrainEntry ReadEntry(FileInfo file)
     {
         var entry = JsonSerializer.Deserialize<BrainEntry>(file.ReadAllText(), BrainJson.Options);
@@ -122,6 +180,15 @@ internal sealed class BrainStore
             throw new InvalidDataException($"The entry file '{file.FullName}' did not contain a Brain entry.");
 
         return Normalise(entry);
+    }
+
+    private static BrainForgottenEntry ReadForgottenEntry(FileInfo file)
+    {
+        var entry = JsonSerializer.Deserialize<BrainForgottenEntry>(file.ReadAllText(), BrainJson.Options);
+        if (entry == null)
+            throw new InvalidDataException($"The forgotten-entry file '{file.FullName}' did not contain a Brain entry ID.");
+
+        return entry;
     }
 
     private static BrainEntry Normalise(BrainEntry entry)

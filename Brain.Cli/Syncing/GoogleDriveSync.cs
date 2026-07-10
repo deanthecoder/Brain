@@ -85,7 +85,7 @@ internal sealed class GoogleDriveSync : IBrainSynchroniser
         var remoteFiles = ListEntries(service)
             .GroupBy(x => x.Name, StringComparer.Ordinal)
             .ToDictionary(x => x.Key, x => x.First(), StringComparer.Ordinal);
-        var localFiles = m_store.GetEntryFiles()
+        var localFiles = m_store.GetSyncFiles()
             .ToDictionary(x => x.Name, x => x, StringComparer.Ordinal);
 
         var downloaded = 0;
@@ -97,7 +97,7 @@ internal sealed class GoogleDriveSync : IBrainSynchroniser
             using var stream = new MemoryStream();
             service.Files.Get(remoteFile.Value.Id).Download(stream);
             stream.Position = 0;
-            m_store.Import(stream);
+            m_store.Import(remoteFile.Key, stream);
             downloaded++;
         }
 
@@ -115,7 +115,7 @@ internal sealed class GoogleDriveSync : IBrainSynchroniser
             .ToHashSet(StringComparer.Ordinal);
         var uploaded = 0;
 
-        foreach (var localFile in m_store.GetEntryFiles())
+        foreach (var localFile in m_store.GetSyncFiles())
         {
             if (remoteNames.Contains(localFile.Name))
                 continue;
@@ -171,7 +171,7 @@ internal sealed class GoogleDriveSync : IBrainSynchroniser
         {
             var request = service.Files.List();
             request.Spaces = "appDataFolder";
-            request.Q = "name contains 'entry-'";
+            request.Q = "name contains 'entry-' or name contains 'forgotten-'";
             request.Fields = "nextPageToken, files(id, name)";
             request.PageToken = pageToken;
 

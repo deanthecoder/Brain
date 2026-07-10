@@ -10,12 +10,4 @@
 
 namespace Brain.Cli.Models;
 
-internal sealed record BrainAnalysis(
-    IReadOnlySet<string> People,
-    IReadOnlySet<string> ExplicitPeople,
-    IReadOnlySet<string> References,
-    IReadOnlySet<string> Urls,
-    IReadOnlySet<string> EmailAddresses,
-    string Context,
-    string ContextReason,
-    bool IsTodo);
+internal sealed record BrainForgottenEntry(string Id, DateTimeOffset ForgottenAt);

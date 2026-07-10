@@ -120,6 +120,24 @@ public sealed class BrainAppTests
         });
     }
 
+    [Test]
+    public void GivenTodoThoughtCheckTodosCollatesIt()
+    {
+        using var home = new TempDirectory();
+        var store = new BrainStore(home);
+        var app = new BrainApp(store);
+
+        var addResult = app.Run(["@todo", "Buy", "flowers"]);
+        var todos = store.LoadEntries().Where(x => x.IsTodo).ToArray();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(addResult, Is.Zero);
+            Assert.That(todos, Has.Length.EqualTo(1));
+            Assert.That(todos[0].People, Is.Empty);
+        });
+    }
+
     private sealed class TestSynchroniser : IBrainSynchroniser
     {
         public bool CanSynchroniseAutomatically => true;

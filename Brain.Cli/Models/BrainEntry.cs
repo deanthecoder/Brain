@@ -19,4 +19,5 @@ internal sealed record BrainEntry(
     IReadOnlyList<string> People,
     IReadOnlyList<string> References,
     IReadOnlyList<string> Urls,
-    IReadOnlyList<string> EmailAddresses);
+    IReadOnlyList<string> EmailAddresses,
+    bool IsTodo = false);

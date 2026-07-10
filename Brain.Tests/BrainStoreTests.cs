@@ -83,4 +83,29 @@ public sealed class BrainStoreTests
             Assert.That(File.Exists(Path.Combine(home.FullName, "entries", "entry-legacy-1.json")), Is.True);
         });
     }
+
+    [Test]
+    public void GivenForgottenEntryCheckItIsExcludedFromLoadedEntries()
+    {
+        using var home = new TempDirectory();
+        var store = new BrainStore(home);
+        store.Append(new BrainEntry(
+            "note-1",
+            DateTimeOffset.UtcNow,
+            "A remembered thought",
+            null,
+            null,
+            Array.Empty<string>(),
+            Array.Empty<string>(),
+            Array.Empty<string>(),
+            Array.Empty<string>()));
+
+        store.Forget("note-1");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(store.LoadEntries(), Is.Empty);
+            Assert.That(store.GetSyncFiles().Select(x => x.Name), Is.EquivalentTo(new[] { "entry-note-1.json", "forgotten-note-1.json" }));
+        });
+    }
 }

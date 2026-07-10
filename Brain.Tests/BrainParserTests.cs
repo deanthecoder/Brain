@@ -44,4 +44,16 @@ public sealed class BrainParserTests
         Assert.That(analysis.People, Is.EquivalentTo(new[] { "Alice" }));
         Assert.That(analysis.ExplicitPeople, Is.Empty);
     }
+
+    [Test]
+    public void GivenTodoTagCheckTodoIsRecognisedWithoutAddingAPerson()
+    {
+        var analysis = BrainParser.Analyse("@todo Buy flowers for Erica", new HashSet<string>());
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(analysis.IsTodo, Is.True);
+            Assert.That(analysis.People, Is.Empty);
+        });
+    }
 }

@@ -34,6 +34,8 @@ brain add <text>             Remember a thought
 brain recall <query>         Search remembered thoughts
 brain recent [count]         Show recent thoughts
 brain people                 Show known people
+brain todos                  Show remembered todos
+brain forget <id>            Forget an entry
 brain path                   Show the storage path
 brain drive connect <credentials.json>
                             Connect Google Drive
@@ -55,10 +57,13 @@ In PowerShell, quote text and queries containing `@`, for example `brain recall 
 ## Tiny conventions
 
 - `@Erica` marks Erica as a person and remembers that name for future entries.
+- `@todo` marks a thought as a todo. Use `brain todos` to collate them.
 - Later mentions of `Erica` are tagged automatically once Brain knows the person.
 - `PLAT-123`-style references are captured as references and currently imply `work` context.
 - Phrases like `my wife` imply `personal` context.
 - HTTP(S) and `www.` URLs, plus email addresses, are captured as entry metadata.
+
+Human-readable recall, recent, and todo output includes an entry ID. Use it with `brain forget <id>` to remove an entry; forgotten entries are synchronised as tombstones so they are not restored by another machine.
 
 These are deterministic hints, not AI guesses. Strong signals are recorded; ambiguous notes are left alone.
 
