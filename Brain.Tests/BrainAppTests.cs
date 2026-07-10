@@ -35,7 +35,21 @@ public sealed class BrainAppTests
     }
 
     [Test]
-    public void GivenConnectedDriveCheckCaptureSynchronisesBeforeAndAfter()
+    public void GivenSingleDashHomeSwitchCheckStorageIsCreatedThere()
+    {
+        using var home = new TempDirectory();
+
+        var result = new BrainApp().Run(["-home", home.FullName, "add", "A remembered thought"]);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result, Is.Zero);
+            Assert.That(new BrainStore(home).LoadEntries(), Has.Count.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public void GivenDueConnectedDriveCheckCapturePullsThenPushes()
     {
         using var home = new TempDirectory();
         var synchroniser = new TestSynchroniser();
@@ -46,7 +60,8 @@ public sealed class BrainAppTests
         Assert.Multiple(() =>
         {
             Assert.That(result, Is.Zero);
-            Assert.That(synchroniser.SyncCount, Is.EqualTo(2));
+            Assert.That(synchroniser.PullCount, Is.EqualTo(1));
+            Assert.That(synchroniser.PushCount, Is.EqualTo(1));
         });
     }
 
@@ -62,7 +77,8 @@ public sealed class BrainAppTests
         Assert.Multiple(() =>
         {
             Assert.That(result, Is.Zero);
-            Assert.That(synchroniser.SyncCount, Is.Zero);
+            Assert.That(synchroniser.PullCount, Is.Zero);
+            Assert.That(synchroniser.PushCount, Is.Zero);
         });
     }
 
@@ -88,15 +104,48 @@ public sealed class BrainAppTests
         });
     }
 
+    [Test]
+    public void GivenRecentlyPulledConnectedDriveCheckRecallDoesNotPullAgain()
+    {
+        using var home = new TempDirectory();
+        var synchroniser = new TestSynchroniser { IsPullDue = false };
+        var app = new BrainApp(new BrainStore(home), _ => synchroniser);
+
+        var result = app.Run(["recall", "anything"]);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result, Is.EqualTo(1));
+            Assert.That(synchroniser.PullCount, Is.Zero);
+        });
+    }
+
     private sealed class TestSynchroniser : IBrainSynchroniser
     {
         public bool CanSynchroniseAutomatically => true;
 
-        public int SyncCount { get; private set; }
+        public bool IsPullDue { get; set; } = true;
+
+        public int PullCount { get; private set; }
+
+        public int PushCount { get; private set; }
+
+        public DriveSyncResult Pull()
+        {
+            PullCount++;
+            return new DriveSyncResult(0, 0);
+        }
+
+        public DriveSyncResult Push()
+        {
+            PushCount++;
+            return new DriveSyncResult(0, 0);
+        }
 
         public DriveSyncResult Sync()
         {
-            SyncCount++;
+            Pull();
+            Push();
             return new DriveSyncResult(0, 0);
         }
     }

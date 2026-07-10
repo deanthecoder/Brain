@@ -21,6 +21,8 @@ namespace Brain.Cli.Syncing;
 
 internal sealed class GoogleDriveSync : IBrainSynchroniser
 {
+    private static readonly TimeSpan PullInterval = TimeSpan.FromHours(1);
+
     private readonly BrainStore m_store;
     private readonly GoogleDriveSettings m_settings = new();
 
@@ -33,12 +35,15 @@ internal sealed class GoogleDriveSync : IBrainSynchroniser
 
     public bool CanSynchroniseAutomatically => IsConnected && new GoogleDriveTokenStore(m_settings).HasTokens();
 
+    public bool IsPullDue => DateTime.UtcNow - m_settings.LastPulledAtUtc >= PullInterval;
+
     public void Connect(string credentialsPath)
     {
         var credentials = ReadCredentials(new FileInfo(credentialsPath));
 
         m_settings.ClientId = credentials.ClientId;
         m_settings.ClientSecret = credentials.ClientSecret;
+        m_settings.LastPulledAtUtc = DateTime.MinValue;
         using var service = CreateService();
         m_settings.Save();
     }
@@ -68,30 +73,20 @@ internal sealed class GoogleDriveSync : IBrainSynchroniser
 
     public DriveSyncResult Sync()
     {
+        var pulled = Pull();
+        var pushed = Push();
+
+        return new DriveSyncResult(pushed.Uploaded, pulled.Downloaded);
+    }
+
+    public DriveSyncResult Pull()
+    {
         using var service = CreateService();
         var remoteFiles = ListEntries(service)
             .GroupBy(x => x.Name, StringComparer.Ordinal)
             .ToDictionary(x => x.Key, x => x.First(), StringComparer.Ordinal);
         var localFiles = m_store.GetEntryFiles()
             .ToDictionary(x => x.Name, x => x, StringComparer.Ordinal);
-
-        var uploaded = 0;
-        foreach (var localFile in localFiles)
-        {
-            if (remoteFiles.ContainsKey(localFile.Key))
-                continue;
-
-            using var stream = localFile.Value.OpenRead();
-            var request = service.Files.Create(new DriveFile
-            {
-                Name = localFile.Key,
-                Parents = new List<string> { "appDataFolder" },
-                MimeType = "application/json"
-            }, stream, "application/json");
-            request.Fields = "id";
-            request.Upload();
-            uploaded++;
-        }
 
         var downloaded = 0;
         foreach (var remoteFile in remoteFiles)
@@ -106,7 +101,38 @@ internal sealed class GoogleDriveSync : IBrainSynchroniser
             downloaded++;
         }
 
-        return new DriveSyncResult(uploaded, downloaded);
+        m_settings.LastPulledAtUtc = DateTime.UtcNow;
+        m_settings.Save();
+
+        return new DriveSyncResult(0, downloaded);
+    }
+
+    public DriveSyncResult Push()
+    {
+        using var service = CreateService();
+        var remoteNames = ListEntries(service)
+            .Select(x => x.Name)
+            .ToHashSet(StringComparer.Ordinal);
+        var uploaded = 0;
+
+        foreach (var localFile in m_store.GetEntryFiles())
+        {
+            if (remoteNames.Contains(localFile.Name))
+                continue;
+
+            using var stream = localFile.OpenRead();
+            var request = service.Files.Create(new DriveFile
+            {
+                Name = localFile.Name,
+                Parents = new List<string> { "appDataFolder" },
+                MimeType = "application/json"
+            }, stream, "application/json");
+            request.Fields = "id";
+            request.Upload();
+            uploaded++;
+        }
+
+        return new DriveSyncResult(uploaded, 0);
     }
 
     public void Disconnect()

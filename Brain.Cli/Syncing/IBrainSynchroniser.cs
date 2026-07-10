@@ -14,5 +14,11 @@ internal interface IBrainSynchroniser
 {
     bool CanSynchroniseAutomatically { get; }
 
+    bool IsPullDue { get; }
+
+    DriveSyncResult Pull();
+
+    DriveSyncResult Push();
+
     DriveSyncResult Sync();
 }

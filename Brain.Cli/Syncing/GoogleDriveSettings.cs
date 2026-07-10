@@ -34,9 +34,16 @@ internal sealed class GoogleDriveSettings : UserSettingsBase
         set => Set(value);
     }
 
+    public DateTime LastPulledAtUtc
+    {
+        get => Get<DateTime>();
+        set => Set(value);
+    }
+
     protected override void ApplyDefaults()
     {
         Tokens = new Dictionary<string, string>(StringComparer.Ordinal);
+        LastPulledAtUtc = DateTime.MinValue;
     }
 
     public void Clear()
@@ -44,6 +51,7 @@ internal sealed class GoogleDriveSettings : UserSettingsBase
         ClientId = null;
         ClientSecret = null;
         Tokens = new Dictionary<string, string>(StringComparer.Ordinal);
+        LastPulledAtUtc = DateTime.MinValue;
         Save();
     }
 }

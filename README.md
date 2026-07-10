@@ -42,11 +42,13 @@ brain drive status           Show Google Drive connection status
 brain drive disconnect       Forget the Google Drive connection
 ```
 
-Add `--json` to emit machine-readable output:
+Add `--json` or `-json` to emit machine-readable output:
 
 ```bash
 brain recall PLAT-123 --json
 ```
+
+Global switches accept either one or two dashes, for example `-home C:\BrainData` or `--offline`.
 
 In PowerShell, quote text and queries containing `@`, for example `brain recall "@Erica"`.
 
@@ -79,7 +81,7 @@ One Google setup is needed for each Google project, not for each Brain installat
 
 Google opens a browser for the actual account sign-in after this command. The credentials JSON is read once; Brain stores the required local connection details and does not use environment variables.
 
-Once connected, Brain synchronises automatically before reads and before and after captures. `brain drive sync` remains available for an explicit sync, while `--offline` skips automatic sync for one command.
+Once connected, Brain pulls from Google Drive before reads when its last pull was at least one hour ago, and pushes after every capture. `brain drive sync` remains available for an explicit full sync, while `--offline` skips automatic sync for one command.
 
 On Windows this is normally:
 

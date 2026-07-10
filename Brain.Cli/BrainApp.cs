@@ -45,15 +45,15 @@ internal sealed class BrainApp
     {
         try
         {
-            var home = RemoveOption(args, "--home", out args);
+            var home = RemoveOption(args, out args, "--home", "-home");
             if (args.Length == 0 || IsHelp(args[0]))
             {
                 PrintHelp();
                 return 0;
             }
 
-            var json = RemoveFlag(args, "--json", out args);
-            var offline = RemoveFlag(args, "--offline", out args);
+            var json = RemoveFlag(args, out args, "--json", "-json");
+            var offline = RemoveFlag(args, out args, "--offline", "-offline");
             if (args.Length == 0)
             {
                 PrintHelp();
@@ -66,8 +66,8 @@ internal sealed class BrainApp
             var synchroniser = m_syncFactory(m_store);
             var synchroniseAutomatically = !offline && command != "drive" && CanSynchroniseAutomatically(synchroniser);
 
-            if (synchroniseAutomatically)
-                TrySynchronise(synchroniser);
+            if (synchroniseAutomatically && synchroniser.IsPullDue)
+                TryPull(synchroniser);
 
             var result = command switch
             {
@@ -81,7 +81,7 @@ internal sealed class BrainApp
             };
 
             if (synchroniseAutomatically && IsCaptureCommand(command))
-                TrySynchronise(synchroniser);
+                TryPush(synchroniser);
 
             return result;
         }
@@ -311,11 +311,23 @@ internal sealed class BrainApp
         return command is not "recall" and not "search" and not "find" and not "recent" and not "people" and not "path" and not "drive";
     }
 
-    private static void TrySynchronise(IBrainSynchroniser synchroniser)
+    private static void TryPull(IBrainSynchroniser synchroniser)
     {
         try
         {
-            synchroniser.Sync();
+            synchroniser.Pull();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Google Drive sync pending: {ex.Message}");
+        }
+    }
+
+    private static void TryPush(IBrainSynchroniser synchroniser)
+    {
+        try
+        {
+            synchroniser.Push();
         }
         catch (Exception ex)
         {
@@ -387,8 +399,9 @@ internal sealed class BrainApp
             | `brain drive status` | Show Google Drive connection status |
             | `brain drive disconnect` | Forget the Google Drive connection |
 
-            `--home <path>` uses a specific storage directory.
-            `--offline` skips automatic Google Drive sync.
+            `--home <path>` or `-home <path>` uses a specific storage directory.
+            `--json` or `-json` emits machine-readable JSON.
+            `--offline` or `-offline` skips automatic Google Drive sync.
 
             ## Conventions
 
@@ -415,14 +428,14 @@ internal sealed class BrainApp
 
     private static bool IsHelp(string arg) => arg is "-h" or "--help" or "help";
 
-    private static bool RemoveFlag(string[] args, string flag, out string[] remaining)
+    private static bool RemoveFlag(string[] args, out string[] remaining, params string[] flags)
     {
         var found = false;
         var kept = new List<string>();
 
         foreach (var arg in args)
         {
-            if (string.Equals(arg, flag, StringComparison.OrdinalIgnoreCase))
+            if (flags.Contains(arg, StringComparer.OrdinalIgnoreCase))
                 found = true;
             else
                 kept.Add(arg);
@@ -432,21 +445,21 @@ internal sealed class BrainApp
         return found;
     }
 
-    private static string RemoveOption(string[] args, string option, out string[] remaining)
+    private static string RemoveOption(string[] args, out string[] remaining, params string[] options)
     {
         var value = default(string);
         var kept = new List<string>();
 
         for (var index = 0; index < args.Length; index++)
         {
-            if (!string.Equals(args[index], option, StringComparison.OrdinalIgnoreCase))
+            if (!options.Contains(args[index], StringComparer.OrdinalIgnoreCase))
             {
                 kept.Add(args[index]);
                 continue;
             }
 
             if (value != null || ++index >= args.Length || args[index].StartsWith("--", StringComparison.Ordinal))
-                throw new BrainUsageException($"{option} expects a directory path.");
+                throw new BrainUsageException($"{options[0]} expects a directory path.");
 
             value = args[index];
         }
