@@ -1,0 +1,38 @@
+{
+  "ProductName": "Brain",
+  "CompanyName": "Dean Edis (DeanTheCoder)",
+  "PublisherUrl": "https://github.com/deanthecoder",
+  "BundleIdentifier": "com.deanthecoder.brain",
+  "Executable": "brain",
+  "Project": "Brain.Cli/Brain.Cli.csproj",
+  "Version": "0.1",
+  "PublishArgs": [
+    "-c",
+    "Release",
+    "--self-contained",
+    "true"
+  ],
+  "CommandLine": {
+    "Name": "brain"
+  },
+  "Win": {
+    "Executable": "brain.exe",
+    "InnoScript": "Installer/templates/inno.iss",
+    "IconIco": "",
+    "GUID": "{56561133-9E7A-4E0B-A1F3-408676E1DC83}",
+    "RuntimeIdentifier": "win-x64",
+    "InstallOpenAL": false,
+    "ShowRunOnStartupTask": false
+  },
+  "Mac": {
+    "Executable": "brain",
+    "RuntimeIdentifiers": [
+      "osx-arm64",
+      "osx-x64"
+    ],
+    "IconIcns": "",
+    "InfoPlist": "Installer/templates/Info.plist",
+    "BundleIdentifier": "com.deanthecoder.brain",
+    "VolumeName": "Brain"
+  }
+}

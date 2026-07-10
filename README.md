@@ -26,6 +26,18 @@ git submodule update --init --recursive
 dotnet build Brain.sln
 ```
 
+## Installers
+
+Brain uses `DTC.Installer` to build self-contained Windows and macOS installers. The installers expose `brain` on the command path, so a new terminal can run it without locating the executable manually.
+
+Build installers locally from the repository root:
+
+```bash
+python Installer/pack.py
+```
+
+Windows produces an Inno Setup installer. macOS produces Apple Silicon and Intel DMGs, each containing a native package installer. Release installers can also be built from the GitHub Actions workflow.
+
 ## Commands
 
 ```text
