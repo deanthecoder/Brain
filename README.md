@@ -15,7 +15,7 @@ brain recall "@Erica"
 brain recent
 ```
 
-Brain stores entries locally as JSON Lines. This first version avoids AI, sync, SQLite, accounts, and complex organisation. The point is to make the core habit feel good before adding more machinery.
+Brain stores each entry as an immutable JSON file. It can optionally sync those files through Google Drive's private application-data folder. The point is to make the core habit feel good before adding more machinery.
 
 ## Build
 
@@ -35,6 +35,11 @@ brain recall <query>         Search remembered thoughts
 brain recent [count]         Show recent thoughts
 brain people                 Show known people
 brain path                   Show the storage path
+brain drive connect <credentials.json>
+                            Connect Google Drive
+brain drive sync             Sync entries with Google Drive
+brain drive status           Show Google Drive connection status
+brain drive disconnect       Forget the Google Drive connection
 ```
 
 Add `--json` to emit machine-readable output:
@@ -58,6 +63,23 @@ These are deterministic hints, not AI guesses. Strong signals are recorded; ambi
 ## Storage
 
 By default Brain stores data in the DTC.Core per-application settings directory. Use `brain path` to display the exact location for the current platform and installation.
+
+Each remembered thought is stored as an immutable JSON file in `entries`. Known people are derived from those entries, rather than stored in a separate index.
+
+## Google Drive
+
+`brain drive connect` opens Google's Desktop OAuth consent flow and requests only access to Brain's private `appDataFolder`. The connection details and Google refresh token are stored in Brain's normal per-user settings file.
+
+One Google setup is needed for each Google project, not for each Brain installation:
+
+1. Open [Google Cloud credentials](https://console.cloud.google.com/apis/credentials), then create or select a project.
+2. Enable the [Google Drive API](https://console.cloud.google.com/apis/library/drive.googleapis.com).
+3. Create an OAuth client ID with application type **Desktop app**.
+4. Download its JSON file and run `brain drive connect /path/to/client_secret_....json`.
+
+Google opens a browser for the actual account sign-in after this command. The credentials JSON is read once; Brain stores the required local connection details and does not use environment variables.
+
+Once connected, Brain synchronises automatically before reads and before and after captures. `brain drive sync` remains available for an explicit sync, while `--offline` skips automatic sync for one command.
 
 On Windows this is normally:
 

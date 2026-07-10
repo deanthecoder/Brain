@@ -12,6 +12,7 @@ using Brain.Cli.Models;
 using Brain.Cli.Parsing;
 using Brain.Cli.Searching;
 using Brain.Cli.Storage;
+using Brain.Cli.Syncing;
 using DTC.Core.Markdown;
 using System.Text.Json;
 
@@ -22,12 +23,22 @@ internal sealed class BrainApp
     private static readonly ConsoleMarkdown Markdown = new();
 
     private BrainStore m_store;
+    private readonly Func<BrainStore, IBrainSynchroniser> m_syncFactory;
 
-    public BrainApp() { }
+    public BrainApp()
+        : this(null)
+    {
+    }
 
     public BrainApp(BrainStore store)
+        : this(store, store => new GoogleDriveSync(store))
+    {
+    }
+
+    internal BrainApp(BrainStore store, Func<BrainStore, IBrainSynchroniser> syncFactory)
     {
         m_store = store;
+        m_syncFactory = syncFactory;
     }
 
     public int Run(string[] args)
@@ -42,6 +53,7 @@ internal sealed class BrainApp
             }
 
             var json = RemoveFlag(args, "--json", out args);
+            var offline = RemoveFlag(args, "--offline", out args);
             if (args.Length == 0)
             {
                 PrintHelp();
@@ -51,16 +63,27 @@ internal sealed class BrainApp
             m_store ??= new BrainStore(BrainPaths.GetHome(home));
 
             var command = args[0].ToLowerInvariant();
+            var synchroniser = m_syncFactory(m_store);
+            var synchroniseAutomatically = !offline && command != "drive" && CanSynchroniseAutomatically(synchroniser);
 
-            return command switch
+            if (synchroniseAutomatically)
+                TrySynchronise(synchroniser);
+
+            var result = command switch
             {
                 "add" => Add(args[1..], json),
                 "recall" or "search" or "find" => Recall(args[1..], json),
                 "recent" => Recent(args[1..], json),
                 "people" => People(json),
                 "path" => Path(json),
+                "drive" => Drive(args[1..], json),
                 _ => Add(args, json)
             };
+
+            if (synchroniseAutomatically && IsCaptureCommand(command))
+                TrySynchronise(synchroniser);
+
+            return result;
         }
         catch (BrainUsageException ex)
         {
@@ -79,11 +102,6 @@ internal sealed class BrainApp
 
         var people = m_store.LoadPeople();
         var analysis = BrainParser.Analyse(text, people);
-
-        foreach (var explicitPerson in analysis.ExplicitPeople)
-            people.Add(explicitPerson);
-
-        m_store.SavePeople(people);
 
         var entry = new BrainEntry(
             BrainIds.NewId(),
@@ -222,6 +240,102 @@ internal sealed class BrainApp
         return 0;
     }
 
+    private int Drive(string[] args, bool json)
+    {
+        if (args.Length == 0)
+            throw new BrainUsageException("Drive expects connect, sync, status, or disconnect.");
+
+        var drive = new GoogleDriveSync(m_store);
+
+        return args[0].ToLowerInvariant() switch
+        {
+            "connect" => ConnectDrive(drive, args[1..], json),
+            "sync" => SyncDrive(drive, json),
+            "status" => DriveStatus(drive, json),
+            "disconnect" => DisconnectDrive(drive, json),
+            _ => throw new BrainUsageException("Drive expects connect, sync, status, or disconnect.")
+        };
+    }
+
+    private static int ConnectDrive(GoogleDriveSync drive, string[] args, bool json)
+    {
+        if (args.Length != 1)
+        {
+            GoogleDriveSync.PrintConnectionInstructions();
+            return 2;
+        }
+
+        drive.Connect(args[0]);
+        if (json)
+            WriteJson(new { connected = true });
+        else
+            Console.WriteLine("Google Drive connected.");
+
+        return 0;
+    }
+
+    private static int SyncDrive(GoogleDriveSync drive, bool json)
+    {
+        var result = drive.Sync();
+        if (json)
+            WriteJson(result);
+        else
+            Console.WriteLine($"Google Drive synced. Uploaded {result.Uploaded}, downloaded {result.Downloaded}.");
+
+        return 0;
+    }
+
+    private static int DriveStatus(GoogleDriveSync drive, bool json)
+    {
+        if (json)
+            WriteJson(new { connected = drive.IsConnected });
+        else
+            Console.WriteLine(drive.IsConnected ? "Google Drive is connected." : "Google Drive is not connected.");
+
+        return 0;
+    }
+
+    private static int DisconnectDrive(GoogleDriveSync drive, bool json)
+    {
+        drive.Disconnect();
+        if (json)
+            WriteJson(new { connected = false });
+        else
+            Console.WriteLine("Google Drive disconnected.");
+
+        return 0;
+    }
+
+    private static bool IsCaptureCommand(string command)
+    {
+        return command is not "recall" and not "search" and not "find" and not "recent" and not "people" and not "path" and not "drive";
+    }
+
+    private static void TrySynchronise(IBrainSynchroniser synchroniser)
+    {
+        try
+        {
+            synchroniser.Sync();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Google Drive sync pending: {ex.Message}");
+        }
+    }
+
+    private static bool CanSynchroniseAutomatically(IBrainSynchroniser synchroniser)
+    {
+        try
+        {
+            return synchroniser.CanSynchroniseAutomatically;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Google Drive sync pending: {ex.Message}");
+            return false;
+        }
+    }
+
     private static void PrintEntry(BrainEntry entry, int? score = null)
     {
         var context = entry.Context == null ? string.Empty : $" [{entry.Context}]";
@@ -268,8 +382,13 @@ internal sealed class BrainApp
             | `brain recent [count]` | Show recent thoughts |
             | `brain people` | Show known people |
             | `brain path` | Show the storage path |
+            | `brain drive connect <credentials.json>` | Connect a Google Drive account |
+            | `brain drive sync` | Sync entries with Google Drive |
+            | `brain drive status` | Show Google Drive connection status |
+            | `brain drive disconnect` | Forget the Google Drive connection |
 
             `--home <path>` uses a specific storage directory.
+            `--offline` skips automatic Google Drive sync.
 
             ## Conventions
 

@@ -10,6 +10,7 @@
 
 using Brain.Cli;
 using Brain.Cli.Storage;
+using Brain.Cli.Syncing;
 using DTC.Core;
 
 namespace Brain.Tests;
@@ -31,5 +32,72 @@ public sealed class BrainAppTests
             Assert.That(store.LoadPeople(), Is.EquivalentTo(new[] { "Erica" }));
             Assert.That(store.LoadEntries().Single().References, Is.EqualTo(new[] { "PLAT-123" }));
         });
+    }
+
+    [Test]
+    public void GivenConnectedDriveCheckCaptureSynchronisesBeforeAndAfter()
+    {
+        using var home = new TempDirectory();
+        var synchroniser = new TestSynchroniser();
+        var app = new BrainApp(new BrainStore(home), _ => synchroniser);
+
+        var result = app.Run(["A remembered thought"]);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result, Is.Zero);
+            Assert.That(synchroniser.SyncCount, Is.EqualTo(2));
+        });
+    }
+
+    [Test]
+    public void GivenOfflineFlagCheckAutomaticSyncIsSkipped()
+    {
+        using var home = new TempDirectory();
+        var synchroniser = new TestSynchroniser();
+        var app = new BrainApp(new BrainStore(home), _ => synchroniser);
+
+        var result = app.Run(["--offline", "A remembered thought"]);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result, Is.Zero);
+            Assert.That(synchroniser.SyncCount, Is.Zero);
+        });
+    }
+
+    [Test]
+    public void GivenDesktopOAuthCredentialsFileCheckClientDetailsAreRead()
+    {
+        using var credentialsFile = new TempFile(".json");
+        File.WriteAllText(credentialsFile, """
+            {
+              "installed": {
+                "client_id": "client-id.apps.googleusercontent.com",
+                "client_secret": "client-secret"
+              }
+            }
+            """);
+
+        var credentials = GoogleDriveSync.ReadCredentials(credentialsFile);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(credentials.ClientId, Is.EqualTo("client-id.apps.googleusercontent.com"));
+            Assert.That(credentials.ClientSecret, Is.EqualTo("client-secret"));
+        });
+    }
+
+    private sealed class TestSynchroniser : IBrainSynchroniser
+    {
+        public bool CanSynchroniseAutomatically => true;
+
+        public int SyncCount { get; private set; }
+
+        public DriveSyncResult Sync()
+        {
+            SyncCount++;
+            return new DriveSyncResult(0, 0);
+        }
     }
 }

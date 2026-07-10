@@ -16,69 +16,122 @@ namespace Brain.Cli.Storage;
 
 internal sealed class BrainStore
 {
-    private const string EntriesFileName = "entries.jsonl";
-    private const string PeopleFileName = "people.json";
+    private const string EntriesDirectoryName = "entries";
+    private const string LegacyEntriesFileName = "entries.jsonl";
+    private const string LegacyPeopleFileName = "people.json";
 
     public BrainStore(DirectoryInfo home)
     {
         Home = home;
         Home.Create();
+        EntriesDirectory.Create();
+        MigrateLegacyStore();
     }
 
     public DirectoryInfo Home { get; }
 
-    private FileInfo EntriesFile => Home.GetFile(EntriesFileName);
+    private DirectoryInfo EntriesDirectory => Home.GetDir(EntriesDirectoryName);
 
-    private FileInfo PeopleFile => Home.GetFile(PeopleFileName);
+    private FileInfo LegacyEntriesFile => Home.GetFile(LegacyEntriesFileName);
+
+    private FileInfo LegacyPeopleFile => Home.GetFile(LegacyPeopleFileName);
 
     public void Append(BrainEntry entry)
     {
-        var line = JsonSerializer.Serialize(entry, BrainJson.Options);
-        File.AppendAllText(EntriesFile.FullName, line + Environment.NewLine);
+        Save(entry);
     }
 
     public IReadOnlyList<BrainEntry> LoadEntries()
     {
-        if (!EntriesFile.Exists())
-            return Array.Empty<BrainEntry>();
+        return GetEntryFiles().Select(ReadEntry).ToArray();
+    }
 
-        var entries = new List<BrainEntry>();
+    public HashSet<string> LoadPeople()
+    {
+        return LoadEntries()
+            .SelectMany(x => x.People)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+    }
 
-        foreach (var line in File.ReadLines(EntriesFile.FullName))
+    public IEnumerable<FileInfo> GetEntryFiles()
+    {
+        return EntriesDirectory.EnumerateFiles("entry-*.json", SearchOption.TopDirectoryOnly);
+    }
+
+    public void Import(Stream stream)
+    {
+        var entry = JsonSerializer.Deserialize<BrainEntry>(stream, BrainJson.Options);
+        if (entry == null)
+            throw new InvalidDataException("The entry file did not contain a Brain entry.");
+
+        Save(Normalise(entry));
+    }
+
+    private void Save(BrainEntry entry)
+    {
+        var destination = GetEntryFile(entry.Id);
+        if (destination.Exists())
+            return;
+
+        var temporary = EntriesDirectory.GetFile($".{entry.Id}.{Guid.NewGuid():N}.tmp");
+        File.WriteAllText(temporary.FullName, JsonSerializer.Serialize(entry, BrainJson.Options) + Environment.NewLine);
+
+        try
+        {
+            File.Move(temporary.FullName, destination.FullName);
+        }
+        catch (IOException) when (destination.Exists())
+        {
+            // Another process wrote the same immutable entry first.
+        }
+        finally
+        {
+            if (temporary.Exists())
+                temporary.Delete();
+        }
+    }
+
+    private void MigrateLegacyStore()
+    {
+        if (!LegacyEntriesFile.Exists())
+            return;
+
+        foreach (var line in File.ReadLines(LegacyEntriesFile.FullName))
         {
             if (string.IsNullOrWhiteSpace(line))
                 continue;
 
             var entry = JsonSerializer.Deserialize<BrainEntry>(line, BrainJson.Options);
-            if (entry != null)
-            {
-                entries.Add(entry with
-                {
-                    People = entry.People ?? Array.Empty<string>(),
-                    References = entry.References ?? Array.Empty<string>(),
-                    Urls = entry.Urls ?? Array.Empty<string>(),
-                    EmailAddresses = entry.EmailAddresses ?? Array.Empty<string>()
-                });
-            }
+            if (entry == null)
+                throw new InvalidDataException("The legacy entry store contains an invalid entry.");
+
+            Save(Normalise(entry));
         }
 
-        return entries;
+        LegacyEntriesFile.Delete();
+        if (LegacyPeopleFile.Exists())
+            LegacyPeopleFile.Delete();
     }
 
-    public HashSet<string> LoadPeople()
+    private FileInfo GetEntryFile(string id) => EntriesDirectory.GetFile($"entry-{id}.json");
+
+    private static BrainEntry ReadEntry(FileInfo file)
     {
-        if (!PeopleFile.Exists())
-            return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var entry = JsonSerializer.Deserialize<BrainEntry>(file.ReadAllText(), BrainJson.Options);
+        if (entry == null)
+            throw new InvalidDataException($"The entry file '{file.FullName}' did not contain a Brain entry.");
 
-        var people = JsonSerializer.Deserialize<string[]>(PeopleFile.ReadAllText(), BrainJson.Options)
-            ?? Array.Empty<string>();
-
-        return people.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return Normalise(entry);
     }
 
-    public void SavePeople(IReadOnlySet<string> people)
+    private static BrainEntry Normalise(BrainEntry entry)
     {
-        var ordered = people.Order(StringComparer.OrdinalIgnoreCase).ToArray();
-        PeopleFile.WriteAllText(JsonSerializer.Serialize(ordered, BrainJson.Options) + Environment.NewLine);
+        return entry with
+        {
+            People = entry.People ?? Array.Empty<string>(),
+            References = entry.References ?? Array.Empty<string>(),
+            Urls = entry.Urls ?? Array.Empty<string>(),
+            EmailAddresses = entry.EmailAddresses ?? Array.Empty<string>()
+        };
     }
 }

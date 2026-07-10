@@ -16,6 +16,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Google.Apis.Drive.v3" Version="1.75.0.4192" />
     <ProjectReference Include="..\DTC.Core\DTC.Core\DTC.Core.csproj" />
   </ItemGroup>
 

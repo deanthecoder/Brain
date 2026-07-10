@@ -11,6 +11,7 @@
 using Brain.Cli.Models;
 using Brain.Cli.Storage;
 using DTC.Core;
+using System.Text.Json;
 
 namespace Brain.Tests;
 
@@ -18,7 +19,7 @@ namespace Brain.Tests;
 public sealed class BrainStoreTests
 {
     [Test]
-    public void GivenSavedEntryAndPeopleCheckTheyRoundTrip()
+    public void GivenSavedEntryCheckItRoundTripsAndPeopleAreDerived()
     {
         using var home = new TempDirectory();
         var store = new BrainStore(home);
@@ -34,7 +35,6 @@ public sealed class BrainStoreTests
             ["erica@example.com"]);
 
         store.Append(entry);
-        store.SavePeople(new HashSet<string>(["Erica", "Ada"], StringComparer.OrdinalIgnoreCase));
         var loadedEntry = store.LoadEntries().Single();
 
         Assert.Multiple(() =>
@@ -48,7 +48,39 @@ public sealed class BrainStoreTests
             Assert.That(loadedEntry.References, Is.EqualTo(entry.References));
             Assert.That(loadedEntry.Urls, Is.EqualTo(entry.Urls));
             Assert.That(loadedEntry.EmailAddresses, Is.EqualTo(entry.EmailAddresses));
-            Assert.That(store.LoadPeople(), Is.EquivalentTo(new[] { "Ada", "Erica" }));
+            Assert.That(store.LoadPeople(), Is.EquivalentTo(new[] { "Erica" }));
+        });
+    }
+
+    [Test]
+    public void GivenLegacyJsonLinesStoreCheckEntriesAreMigrated()
+    {
+        using var home = new TempDirectory();
+        var entry = new BrainEntry(
+            "legacy-1",
+            DateTimeOffset.Parse("2026-07-10T10:00:00+01:00"),
+            "@Erica mentioned PLAT-123",
+            "work",
+            "jira-style reference",
+            ["Erica"],
+            ["PLAT-123"],
+            Array.Empty<string>(),
+            Array.Empty<string>());
+        var legacyEntriesPath = Path.Combine(home.FullName, "entries.jsonl");
+        var legacyPeoplePath = Path.Combine(home.FullName, "people.json");
+
+        File.WriteAllText(legacyEntriesPath, JsonSerializer.Serialize(entry, BrainJson.Options) + Environment.NewLine);
+        File.WriteAllText(legacyPeoplePath, "[\"Erica\"]");
+
+        var store = new BrainStore(home);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(store.LoadEntries().Single().Id, Is.EqualTo("legacy-1"));
+            Assert.That(store.LoadPeople(), Is.EquivalentTo(new[] { "Erica" }));
+            Assert.That(File.Exists(legacyEntriesPath), Is.False);
+            Assert.That(File.Exists(legacyPeoplePath), Is.False);
+            Assert.That(File.Exists(Path.Combine(home.FullName, "entries", "entry-legacy-1.json")), Is.True);
         });
     }
 }
