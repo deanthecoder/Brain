@@ -365,13 +365,22 @@ internal sealed class BrainApp
 
     private static int DriveStatus(GoogleDriveSync drive, bool json)
     {
+        var status = drive.Status;
         if (json)
-            WriteJson(new { connected = drive.IsConnected });
+            WriteJson(status);
         else
-            Console.WriteLine(drive.IsConnected ? "Google Drive is connected." : "Google Drive is not connected.");
+        {
+            Console.WriteLine(status.Connected ? "Google Drive is connected." : "Google Drive is not connected.");
+            Console.WriteLine($"Last pull: {FormatTimestamp(status.LastPulledAtUtc)}");
+            Console.WriteLine($"Last push: {FormatTimestamp(status.LastPushedAtUtc)}");
+            if (status.LastError != null)
+                Console.WriteLine($"Last error: {status.LastErrorOperation} at {FormatTimestamp(status.LastErrorAtUtc)}: {status.LastError}");
+        }
 
         return 0;
     }
+
+    private static string FormatTimestamp(DateTime? timestamp) => timestamp?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") ?? "never";
 
     private static int DisconnectDrive(GoogleDriveSync drive, bool json)
     {

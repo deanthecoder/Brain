@@ -39,11 +39,29 @@ internal sealed class GoogleDriveSync : IBrainSynchroniser
 
     public bool IsPullDue => DateTime.UtcNow - m_settings.LastPulledAtUtc >= PullInterval;
 
+    public GoogleDriveStatus Status => new(
+        IsConnected,
+        AsNullable(m_settings.LastPulledAtUtc),
+        AsNullable(m_settings.LastPushedAtUtc),
+        m_settings.LastSyncErrorOperation,
+        m_settings.LastSyncError,
+        AsNullable(m_settings.LastSyncErrorAtUtc));
+
     public void Connect()
     {
-        m_settings.LastPulledAtUtc = DateTime.MinValue;
-        using var service = CreateService(false);
-        m_settings.Save();
+        try
+        {
+            using var service = CreateService(false);
+            m_settings.LastPulledAtUtc = DateTime.MinValue;
+            m_settings.LastPushedAtUtc = DateTime.MinValue;
+            ClearError();
+            m_settings.Save();
+        }
+        catch (Exception ex)
+        {
+            RecordError("connect", ex);
+            throw;
+        }
     }
 
     public DriveSyncResult Sync()
@@ -56,58 +74,79 @@ internal sealed class GoogleDriveSync : IBrainSynchroniser
 
     public DriveSyncResult Pull()
     {
-        using var service = CreateService();
-        var remoteFiles = ListEntries(service)
-            .GroupBy(x => x.Name, StringComparer.Ordinal)
-            .ToDictionary(x => x.Key, x => x.First(), StringComparer.Ordinal);
-        var localFiles = m_store.GetSyncFiles()
-            .ToDictionary(x => x.Name, x => x, StringComparer.Ordinal);
-
-        var downloaded = 0;
-        foreach (var remoteFile in remoteFiles)
+        try
         {
-            if (localFiles.ContainsKey(remoteFile.Key))
-                continue;
+            using var service = CreateService();
+            var remoteFiles = ListEntries(service)
+                .GroupBy(x => x.Name, StringComparer.Ordinal)
+                .ToDictionary(x => x.Key, x => x.First(), StringComparer.Ordinal);
+            var localFiles = m_store.GetSyncFiles()
+                .ToDictionary(x => x.Name, x => x, StringComparer.Ordinal);
 
-            using var stream = new MemoryStream();
-            service.Files.Get(remoteFile.Value.Id).Download(stream);
-            stream.Position = 0;
-            m_store.Import(remoteFile.Key, stream);
-            downloaded++;
+            var downloaded = 0;
+            foreach (var remoteFile in remoteFiles)
+            {
+                if (localFiles.ContainsKey(remoteFile.Key))
+                    continue;
+
+                using var stream = new MemoryStream();
+                service.Files.Get(remoteFile.Value.Id).Download(stream);
+                stream.Position = 0;
+                m_store.Import(remoteFile.Key, stream);
+                downloaded++;
+            }
+
+            m_settings.LastPulledAtUtc = DateTime.UtcNow;
+            ClearError();
+            m_settings.Save();
+
+            return new DriveSyncResult(0, downloaded);
         }
-
-        m_settings.LastPulledAtUtc = DateTime.UtcNow;
-        m_settings.Save();
-
-        return new DriveSyncResult(0, downloaded);
+        catch (Exception ex)
+        {
+            RecordError("pull", ex);
+            throw;
+        }
     }
 
     public DriveSyncResult Push()
     {
-        using var service = CreateService();
-        var remoteNames = ListEntries(service)
-            .Select(x => x.Name)
-            .ToHashSet(StringComparer.Ordinal);
-        var uploaded = 0;
-
-        foreach (var localFile in m_store.GetSyncFiles())
+        try
         {
-            if (remoteNames.Contains(localFile.Name))
-                continue;
+            using var service = CreateService();
+            var remoteNames = ListEntries(service)
+                .Select(x => x.Name)
+                .ToHashSet(StringComparer.Ordinal);
+            var uploaded = 0;
 
-            using var stream = localFile.OpenRead();
-            var request = service.Files.Create(new DriveFile
+            foreach (var localFile in m_store.GetSyncFiles())
             {
-                Name = localFile.Name,
-                Parents = new List<string> { "appDataFolder" },
-                MimeType = "application/json"
-            }, stream, "application/json");
-            request.Fields = "id";
-            request.Upload();
-            uploaded++;
-        }
+                if (remoteNames.Contains(localFile.Name))
+                    continue;
 
-        return new DriveSyncResult(uploaded, 0);
+                using var stream = localFile.OpenRead();
+                var request = service.Files.Create(new DriveFile
+                {
+                    Name = localFile.Name,
+                    Parents = new List<string> { "appDataFolder" },
+                    MimeType = "application/json"
+                }, stream, "application/json");
+                request.Fields = "id";
+                request.Upload();
+                uploaded++;
+            }
+
+            m_settings.LastPushedAtUtc = DateTime.UtcNow;
+            ClearError();
+            m_settings.Save();
+
+            return new DriveSyncResult(uploaded, 0);
+        }
+        catch (Exception ex)
+        {
+            RecordError("push", ex);
+            throw;
+        }
     }
 
     public void Disconnect()
@@ -169,6 +208,31 @@ internal sealed class GoogleDriveSync : IBrainSynchroniser
         if (!IsConnected)
             throw new BrainUsageException("Google Drive is not connected. Run 'brain drive connect' first.");
     }
+
+    private void RecordError(string operation, Exception exception)
+    {
+        m_settings.LastSyncErrorOperation = operation;
+        m_settings.LastSyncError = exception.Message;
+        m_settings.LastSyncErrorAtUtc = DateTime.UtcNow;
+        m_settings.Save();
+    }
+
+    private void ClearError()
+    {
+        m_settings.LastSyncErrorOperation = null;
+        m_settings.LastSyncError = null;
+        m_settings.LastSyncErrorAtUtc = DateTime.MinValue;
+    }
+
+    private static DateTime? AsNullable(DateTime value) => value == DateTime.MinValue ? null : value;
 }
 
 internal sealed record DriveSyncResult(int Uploaded, int Downloaded);
+
+internal sealed record GoogleDriveStatus(
+    bool Connected,
+    DateTime? LastPulledAtUtc,
+    DateTime? LastPushedAtUtc,
+    string LastErrorOperation,
+    string LastError,
+    DateTime? LastErrorAtUtc);

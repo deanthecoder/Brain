@@ -82,6 +82,8 @@ brain drive disconnect
 
 Use `--offline` when a command should not synchronize.
 
+`brain drive status` reports the last successful pull and push, plus the most recent synchronization error when one is pending.
+
 ## Use Brain with Codex
 
 The included Codex skill recognizes the phrase **"my brain"**. Once installed, try:

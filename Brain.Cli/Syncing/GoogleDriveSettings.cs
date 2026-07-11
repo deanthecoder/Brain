@@ -28,16 +28,48 @@ internal sealed class GoogleDriveSettings : UserSettingsBase
         set => Set(value);
     }
 
+    public DateTime LastPushedAtUtc
+    {
+        get => Get<DateTime>();
+        set => Set(value);
+    }
+
+    public DateTime LastSyncErrorAtUtc
+    {
+        get => Get<DateTime>();
+        set => Set(value);
+    }
+
+    public string LastSyncErrorOperation
+    {
+        get => Get<string>();
+        set => Set(value);
+    }
+
+    public string LastSyncError
+    {
+        get => Get<string>();
+        set => Set(value);
+    }
+
     protected override void ApplyDefaults()
     {
         Tokens = new Dictionary<string, string>(StringComparer.Ordinal);
         LastPulledAtUtc = DateTime.MinValue;
+        LastPushedAtUtc = DateTime.MinValue;
+        LastSyncErrorAtUtc = DateTime.MinValue;
+        LastSyncErrorOperation = null;
+        LastSyncError = null;
     }
 
     public void Clear()
     {
         Tokens = new Dictionary<string, string>(StringComparer.Ordinal);
         LastPulledAtUtc = DateTime.MinValue;
+        LastPushedAtUtc = DateTime.MinValue;
+        LastSyncErrorAtUtc = DateTime.MinValue;
+        LastSyncErrorOperation = null;
+        LastSyncError = null;
         Save();
     }
 }
