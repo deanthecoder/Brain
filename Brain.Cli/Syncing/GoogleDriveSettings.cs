@@ -16,18 +16,6 @@ internal sealed class GoogleDriveSettings : UserSettingsBase
 {
     protected override string SettingsFileName => "google-drive.json";
 
-    public string ClientId
-    {
-        get => Get<string>();
-        set => Set(value);
-    }
-
-    public string ClientSecret
-    {
-        get => Get<string>();
-        set => Set(value);
-    }
-
     public Dictionary<string, string> Tokens
     {
         get => Get<Dictionary<string, string>>();
@@ -48,8 +36,6 @@ internal sealed class GoogleDriveSettings : UserSettingsBase
 
     public void Clear()
     {
-        ClientId = null;
-        ClientSecret = null;
         Tokens = new Dictionary<string, string>(StringComparer.Ordinal);
         LastPulledAtUtc = DateTime.MinValue;
         Save();

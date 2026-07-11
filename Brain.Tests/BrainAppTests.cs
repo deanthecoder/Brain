@@ -83,25 +83,13 @@ public sealed class BrainAppTests
     }
 
     [Test]
-    public void GivenDesktopOAuthCredentialsFileCheckClientDetailsAreRead()
+    public void GivenDriveConnectArgumentCheckUsageFails()
     {
-        using var credentialsFile = new TempFile(".json");
-        File.WriteAllText(credentialsFile, """
-            {
-              "installed": {
-                "client_id": "client-id.apps.googleusercontent.com",
-                "client_secret": "client-secret"
-              }
-            }
-            """);
+        using var home = new TempDirectory();
 
-        var credentials = GoogleDriveSync.ReadCredentials(credentialsFile);
+        var result = new BrainApp(new BrainStore(home)).Run(["drive", "connect", "credentials.json"]);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(credentials.ClientId, Is.EqualTo("client-id.apps.googleusercontent.com"));
-            Assert.That(credentials.ClientSecret, Is.EqualTo("client-secret"));
-        });
+        Assert.That(result, Is.EqualTo(2));
     }
 
     [Test]

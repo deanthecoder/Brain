@@ -309,13 +309,10 @@ internal sealed class BrainApp
 
     private static int ConnectDrive(GoogleDriveSync drive, string[] args, bool json)
     {
-        if (args.Length != 1)
-        {
-            GoogleDriveSync.PrintConnectionInstructions();
-            return 2;
-        }
+        if (args.Length != 0)
+            throw new BrainUsageException("Drive connect does not expect additional arguments.");
 
-        drive.Connect(args[0]);
+        drive.Connect();
         if (json)
             WriteJson(new { connected = true });
         else
@@ -446,7 +443,7 @@ internal sealed class BrainApp
             | `brain todos` | Show remembered todos |
             | `brain forget <id>` | Forget an entry |
             | `brain path` | Show the storage path |
-            | `brain drive connect <credentials.json>` | Connect a Google Drive account |
+            | `brain drive connect` | Connect a Google Drive account |
             | `brain drive sync` | Sync entries with Google Drive |
             | `brain drive status` | Show Google Drive connection status |
             | `brain drive disconnect` | Forget the Google Drive connection |

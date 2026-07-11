@@ -11,16 +11,18 @@
 using Brain.Cli.Storage;
 using DTC.Core.Extensions;
 using Google.Apis.Auth.OAuth2;
+using Google.Apis.Auth.OAuth2.Flows;
 using Google.Apis.Drive.v3;
 using Google.Apis.Services;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using DriveFile = Google.Apis.Drive.v3.Data.File;
 
 namespace Brain.Cli.Syncing;
 
 internal sealed class GoogleDriveSync : IBrainSynchroniser
 {
+    // Google treats installed-app credentials as public; PKCE protects each authorization exchange.
+    private const string ClientId = "707137292996-927c9q5r8fj3sfg7lvl0hakf0bbq9v78.apps.googleusercontent.com";
+    private const string ClientSecret = "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";
     private static readonly TimeSpan PullInterval = TimeSpan.FromHours(1);
 
     private readonly BrainStore m_store;
@@ -31,44 +33,17 @@ internal sealed class GoogleDriveSync : IBrainSynchroniser
         m_store = store;
     }
 
-    public bool IsConnected => !string.IsNullOrWhiteSpace(m_settings.ClientId);
+    public bool IsConnected => new GoogleDriveTokenStore(m_settings).HasTokens();
 
-    public bool CanSynchroniseAutomatically => IsConnected && new GoogleDriveTokenStore(m_settings).HasTokens();
+    public bool CanSynchroniseAutomatically => IsConnected;
 
     public bool IsPullDue => DateTime.UtcNow - m_settings.LastPulledAtUtc >= PullInterval;
 
-    public void Connect(string credentialsPath)
+    public void Connect()
     {
-        var credentials = ReadCredentials(new FileInfo(credentialsPath));
-
-        m_settings.ClientId = credentials.ClientId;
-        m_settings.ClientSecret = credentials.ClientSecret;
         m_settings.LastPulledAtUtc = DateTime.MinValue;
-        using var service = CreateService();
+        using var service = CreateService(false);
         m_settings.Save();
-    }
-
-    public static void PrintConnectionInstructions()
-    {
-        Console.WriteLine("Google Drive needs a Desktop OAuth credentials file the first time it connects.");
-        Console.WriteLine();
-        Console.WriteLine("1. Open https://console.cloud.google.com/apis/credentials");
-        Console.WriteLine("2. Create or select a project, then enable the Google Drive API.");
-        Console.WriteLine("3. Create an OAuth client ID of type Desktop app.");
-        Console.WriteLine("4. Download its JSON file and run:");
-        Console.WriteLine("   brain drive connect /path/to/client_secret_....json");
-    }
-
-    internal static GoogleOAuthClient ReadCredentials(FileInfo credentialsFile)
-    {
-        if (!credentialsFile.Exists)
-            throw new BrainUsageException($"Google OAuth credentials file not found: {credentialsFile.FullName}");
-
-        var credentials = JsonSerializer.Deserialize<GoogleOAuthCredentialsFile>(credentialsFile.ReadAllText(), BrainJson.Options);
-        if (credentials?.Installed == null || string.IsNullOrWhiteSpace(credentials.Installed.ClientId))
-            throw new BrainUsageException("The credentials file must contain Desktop app OAuth credentials.");
-
-        return credentials.Installed;
     }
 
     public DriveSyncResult Sync()
@@ -140,17 +115,23 @@ internal sealed class GoogleDriveSync : IBrainSynchroniser
         m_settings.Clear();
     }
 
-    private DriveService CreateService()
+    private DriveService CreateService(bool requireConnection = true)
     {
-        EnsureConnected();
+        if (requireConnection)
+            EnsureConnected();
+
         var credential = GoogleWebAuthorizationBroker.AuthorizeAsync(
-                new ClientSecrets
+                new GoogleAuthorizationCodeFlow.Initializer
                 {
-                    ClientId = m_settings.ClientId,
-                    ClientSecret = m_settings.ClientSecret
+                    ClientSecrets = new ClientSecrets
+                    {
+                        ClientId = ClientId,
+                        ClientSecret = ClientSecret
+                    }
                 },
                 new[] { DriveService.Scope.DriveAppdata },
                 "brain",
+                true,
                 CancellationToken.None,
                 new GoogleDriveTokenStore(m_settings))
             .GetAwaiter()
@@ -188,12 +169,6 @@ internal sealed class GoogleDriveSync : IBrainSynchroniser
         if (!IsConnected)
             throw new BrainUsageException("Google Drive is not connected. Run 'brain drive connect' first.");
     }
-
-    private sealed record GoogleOAuthCredentialsFile(GoogleOAuthClient Installed);
-
-    internal sealed record GoogleOAuthClient(
-        [property: JsonPropertyName("client_id")] string ClientId,
-        [property: JsonPropertyName("client_secret")] string ClientSecret);
 }
 
 internal sealed record DriveSyncResult(int Uploaded, int Downloaded);

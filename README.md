@@ -49,8 +49,7 @@ brain people                 Show known people
 brain todos                  Show remembered todos
 brain forget <id>            Forget an entry
 brain path                   Show the storage path
-brain drive connect <credentials.json>
-                            Connect Google Drive
+brain drive connect         Connect Google Drive
 brain drive sync             Sync entries with Google Drive
 brain drive status           Show Google Drive connection status
 brain drive disconnect       Forget the Google Drive connection
@@ -87,16 +86,7 @@ Each remembered thought is stored as an immutable JSON file in `entries`. Known 
 
 ## Google Drive
 
-`brain drive connect` opens Google's Desktop OAuth consent flow and requests only access to Brain's private `appDataFolder`. The connection details and Google refresh token are stored in Brain's normal per-user settings file.
-
-One Google setup is needed for each Google project, not for each Brain installation:
-
-1. Open [Google Cloud credentials](https://console.cloud.google.com/apis/credentials), then create or select a project.
-2. Enable the [Google Drive API](https://console.cloud.google.com/apis/library/drive.googleapis.com).
-3. Create an OAuth client ID with application type **Desktop app**.
-4. Download its JSON file and run `brain drive connect /path/to/client_secret_....json`.
-
-Google opens a browser for the actual account sign-in after this command. The credentials JSON is read once; Brain stores the required local connection details and does not use environment variables.
+`brain drive connect` opens Google's OAuth consent flow and requests only access to Brain's private `appDataFolder`. The Google refresh token is stored in Brain's normal per-user settings file. Brain uses its bundled Desktop OAuth client with PKCE, so users do not need credentials files or environment variables.
 
 Once connected, Brain pulls from Google Drive before reads when its last pull was at least one hour ago, and pushes after every capture. `brain drive sync` remains available for an explicit full sync, while `--offline` skips automatic sync for one command.
 
