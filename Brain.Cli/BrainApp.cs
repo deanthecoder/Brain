@@ -46,15 +46,9 @@ internal sealed class BrainApp
         try
         {
             var home = RemoveOption(args, out args, "--home", "-home");
-            if (args.Length == 0 || IsHelp(args[0]))
-            {
-                PrintHelp();
-                return 0;
-            }
-
             var json = RemoveFlag(args, out args, "--json", "-json");
             var offline = RemoveFlag(args, out args, "--offline", "-offline");
-            if (args.Length == 0)
+            if (args.Length == 0 || args.Any(IsHelp))
             {
                 PrintHelp();
                 return 0;

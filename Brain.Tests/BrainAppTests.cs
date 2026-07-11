@@ -83,6 +83,21 @@ public sealed class BrainAppTests
     }
 
     [Test]
+    public void GivenOfflineHelpCheckNothingIsRemembered()
+    {
+        using var home = new TempDirectory();
+        var store = new BrainStore(home);
+
+        var result = new BrainApp(store).Run(["--offline", "--help"]);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result, Is.Zero);
+            Assert.That(store.LoadEntries(), Is.Empty);
+        });
+    }
+
+    [Test]
     public void GivenDriveConnectArgumentCheckUsageFails()
     {
         using var home = new TempDirectory();

@@ -9,7 +9,7 @@ Use the installed `brain` CLI as the source of truth. Use `--json` for machine-r
 
 ## Check availability
 
-Run `brain --offline --help` before the first operation when availability is uncertain. If `brain` is unavailable, explain that the Brain CLI must be installed and stop. Do not search the filesystem for private Brain data or bypass the CLI.
+Run `brain path --offline --json` before the first operation when availability is uncertain. If `brain` is unavailable, explain that the Brain CLI must be installed and stop. Do not search the filesystem for private Brain data or bypass the CLI.
 
 Do not add `--offline` to normal operations unless the user requests it. Brain manages its own Google Drive synchronization.
 
