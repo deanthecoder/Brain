@@ -46,8 +46,9 @@ internal static partial class BrainParser
         if (urls.Count > 0)
             tags.Add("url");
 
-        var cleanText = WhitespaceRegex().Replace(HashtagRegex().Replace(text, " "), " ").Trim();
-        cleanText = SpaceBeforePunctuationRegex().Replace(cleanText, "$1");
+        var cleanText = HashtagRegex().Replace(text, "\u001F");
+        cleanText = WhitespaceBeforeTagMarkerRegex().Replace(cleanText, string.Empty);
+        cleanText = WhitespaceRegex().Replace(cleanText, " ").Trim();
 
         var (context, reason) = DetermineContext(text, references);
 
@@ -114,6 +115,6 @@ internal static partial class BrainParser
     [GeneratedRegex(@"\s+", RegexOptions.CultureInvariant)]
     private static partial Regex WhitespaceRegex();
 
-    [GeneratedRegex(@"\s+([,.;:!?])", RegexOptions.CultureInvariant)]
-    private static partial Regex SpaceBeforePunctuationRegex();
+    [GeneratedRegex("\\s*\\u001F", RegexOptions.CultureInvariant)]
+    private static partial Regex WhitespaceBeforeTagMarkerRegex();
 }

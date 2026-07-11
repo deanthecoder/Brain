@@ -71,6 +71,14 @@ public sealed class BrainParserTests
     }
 
     [Test]
+    public void GivenTextWithLeadingDotCheckSpaceIsPreserved()
+    {
+        var analysis = BrainParser.Analyse("Use .NET 8.0 for new .NET projects. #dotnet", new HashSet<string>());
+
+        Assert.That(analysis.Text, Is.EqualTo("Use .NET 8.0 for new .NET projects."));
+    }
+
+    [Test]
     public void GivenHashesInCodeAndUrlsCheckTheyAreNotTags()
     {
         var analysis = BrainParser.Analyse("Use C# and https://example.com/page#section", new HashSet<string>());
