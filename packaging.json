@@ -18,7 +18,7 @@
   "Win": {
     "Executable": "brain.exe",
     "InnoScript": "Installer/templates/inno.iss",
-    "IconIco": "",
+    "IconIco": "Assets/Brain.ico",
     "GUID": "{56561133-9E7A-4E0B-A1F3-408676E1DC83}",
     "RuntimeIdentifier": "win-x64",
     "InstallOpenAL": false,
@@ -30,7 +30,7 @@
       "osx-arm64",
       "osx-x64"
     ],
-    "IconIcns": "",
+    "IconIcns": "Assets/Brain.icns",
     "InfoPlist": "Installer/templates/Info.plist",
     "BundleIdentifier": "com.deanthecoder.brain",
     "VolumeName": "Brain"
