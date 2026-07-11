@@ -172,11 +172,22 @@ internal sealed class BrainApp
 
     private int Recall(string[] words, bool json)
     {
+        var countText = RemoveOption(words, out words, "--count", "-count");
+        int? count = null;
+        if (countText != null)
+        {
+            if (!int.TryParse(countText, out var parsedCount) || parsedCount < 1)
+                throw new BrainUsageException("Recall count must be a positive number.");
+
+            count = parsedCount;
+        }
+
         var query = JoinWords(words);
         if (string.IsNullOrWhiteSpace(query))
             throw new BrainUsageException("What should I recall?");
 
-        var matches = BrainSearch.Search(m_store.LoadEntries(), query).Take(20).ToArray();
+        var search = BrainSearch.Search(m_store.LoadEntries(), query);
+        var matches = (count == null ? search : search.Take(count.Value)).ToArray();
 
         if (json)
         {
@@ -515,7 +526,7 @@ internal sealed class BrainApp
             | --- | --- |
             | `brain <text>` | Remember a thought |
             | `brain add <text>` | Remember a thought |
-            | `brain recall <query>` | Search remembered thoughts |
+            | `brain recall <query> [--count <number>]` | Search remembered thoughts |
             | `brain recent [count]` | Show recent thoughts |
             | `brain people` | Show known people |
             | `brain tags` | Show known tags and entry counts |
@@ -531,6 +542,7 @@ internal sealed class BrainApp
             `--home <path>` or `-home <path>` uses a specific storage directory.
             `--json` or `-json` emits machine-readable JSON.
             `--offline` or `-offline` skips automatic Google Drive sync.
+            Recall returns every match unless `--count <number>` or `-count <number>` is supplied.
 
             ## Conventions
 
@@ -592,7 +604,7 @@ internal sealed class BrainApp
             }
 
             if (value != null || ++index >= args.Length || args[index].StartsWith("--", StringComparison.Ordinal))
-                throw new BrainUsageException($"{options[0]} expects a directory path.");
+                throw new BrainUsageException($"{options[0]} expects a value.");
 
             value = args[index];
         }

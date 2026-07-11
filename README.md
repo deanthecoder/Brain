@@ -47,6 +47,7 @@ Search and browse your memories:
 
 ```bash
 brain recall "flowers"
+brain recall "#dean-coding-style" --count 10
 brain recent
 brain recent 20
 brain people
@@ -54,7 +55,7 @@ brain tags
 brain todos
 ```
 
-Recall output includes each entry's ID. Use it to forget something:
+Recall returns every matching entry by default. Add `--count <number>` (or `-count <number>`) when you only want the highest-ranked matches. Output includes each entry's ID; use it to forget something:
 
 ```bash
 brain forget 88e961720efc3bcf
@@ -127,7 +128,8 @@ These hints are deterministic; Brain does not use AI to rewrite or reinterpret s
 ```text
 brain <text>                 Remember a thought
 brain add <text>             Remember a thought
-brain recall <query>         Search remembered thoughts
+brain recall <query> [--count <number>]
+                             Search remembered thoughts
 brain recent [count]         Show recent thoughts
 brain people                 Show known people
 brain tags                   Show known tags and entry counts

@@ -12,6 +12,7 @@ using Brain.Cli;
 using Brain.Cli.Storage;
 using Brain.Cli.Syncing;
 using DTC.Core;
+using System.Text.Json;
 
 namespace Brain.Tests;
 
@@ -191,6 +192,66 @@ public sealed class BrainAppTests
         app.Run(["A remembered thought #work"]);
 
         Assert.That(store.LoadEntries(), Has.Count.EqualTo(2));
+    }
+
+    [Test]
+    public void GivenRecallWithoutCountCheckAllMatchesAreReturned()
+    {
+        using var home = new TempDirectory();
+        var store = StoreMatchingEntries(home, 25);
+
+        var results = RunJson(new BrainApp(store, _ => new TestSynchroniser { IsPullDue = false }), ["recall", "matching", "--json"]);
+
+        Assert.That(results.GetArrayLength(), Is.EqualTo(25));
+    }
+
+    [Test]
+    public void GivenRecallCountCheckMatchesAreLimited()
+    {
+        using var home = new TempDirectory();
+        var store = StoreMatchingEntries(home, 5);
+
+        var results = RunJson(new BrainApp(store, _ => new TestSynchroniser { IsPullDue = false }), ["recall", "matching", "-count", "3", "--json"]);
+
+        Assert.That(results.GetArrayLength(), Is.EqualTo(3));
+    }
+
+    private static BrainStore StoreMatchingEntries(DirectoryInfo home, int count)
+    {
+        var store = new BrainStore(home);
+        for (var index = 0; index < count; index++)
+        {
+            store.Append(new Brain.Cli.Models.BrainEntry(
+                $"entry-{index}",
+                DateTimeOffset.UtcNow.AddSeconds(index),
+                $"A matching thought {index}",
+                null,
+                null,
+                Array.Empty<string>(),
+                Array.Empty<string>(),
+                Array.Empty<string>(),
+                Array.Empty<string>()));
+        }
+
+        return store;
+    }
+
+    private static JsonElement RunJson(BrainApp app, string[] args)
+    {
+        var originalOut = Console.Out;
+        using var output = new StringWriter();
+        try
+        {
+            Console.SetOut(output);
+            Assert.That(app.Run(args), Is.Zero);
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+        }
+
+        using var document = JsonDocument.Parse(output.ToString());
+        return document.RootElement.Clone();
     }
 
     private sealed class TestSynchroniser : IBrainSynchroniser
