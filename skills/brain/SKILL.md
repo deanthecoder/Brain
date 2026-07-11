@@ -50,7 +50,7 @@ Treat "review my brain", "improve my brain", and "tidy my brain" as a read-only 
 3. Present numbered suggestions with affected entry IDs and the proposed result.
 4. Do not modify anything until the user explicitly approves numbered suggestions.
 
-Brain does not yet expose tag, untag, or revise commands. Describe those recommendations without claiming they were applied. For an approved consolidation or revision that can be represented safely with current commands:
+Brain recognizes hashtags in remembered text as tags and removes them from the clean display text while retaining the verbatim input. It does not yet expose untag or revise commands. Describe unsupported recommendations without claiming they were applied. For an approved consolidation or revision that can be represented safely with current commands:
 
 1. Add the approved replacement text first with `brain add <text> --json`.
 2. Verify that the new entry succeeded and retain its ID.

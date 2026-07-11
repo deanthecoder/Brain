@@ -16,6 +16,8 @@ internal sealed record BrainAnalysis(
     IReadOnlySet<string> References,
     IReadOnlySet<string> Urls,
     IReadOnlySet<string> EmailAddresses,
+    IReadOnlySet<string> Tags,
+    string Text,
     string Context,
     string ContextReason,
     bool IsTodo);

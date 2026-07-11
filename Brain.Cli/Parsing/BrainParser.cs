@@ -42,9 +42,18 @@ internal static partial class BrainParser
             .Select(x => x.Value.ToLowerInvariant())
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
+        var tags = HashtagRegex()
+            .Matches(text)
+            .Select(x => x.Groups["tag"].Value.ToLowerInvariant())
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var cleanText = WhitespaceRegex().Replace(HashtagRegex().Replace(text, " "), " ").Trim();
+        cleanText = SpaceBeforePunctuationRegex().Replace(cleanText, "$1");
+
         var (context, reason) = DetermineContext(text, references);
 
-        return new BrainAnalysis(people, explicitPeople, references, urls, emailAddresses, context, reason, TodoTagRegex().IsMatch(text));
+        return new BrainAnalysis(people, explicitPeople, references, urls, emailAddresses, tags, cleanText, context, reason,
+            TodoTagRegex().IsMatch(text) || tags.Contains("todo"));
     }
 
     private static HashSet<string> FindExplicitPeople(string text)
@@ -102,4 +111,13 @@ internal static partial class BrainParser
 
     [GeneratedRegex(@"(?<![\w.])@todo\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex TodoTagRegex();
+
+    [GeneratedRegex(@"(?<![\p{L}\p{N}_/#])#(?<tag>[\p{L}\p{N}](?:[\p{L}\p{N}_-]*[\p{L}\p{N}])?)\b", RegexOptions.CultureInvariant)]
+    private static partial Regex HashtagRegex();
+
+    [GeneratedRegex(@"\s+", RegexOptions.CultureInvariant)]
+    private static partial Regex WhitespaceRegex();
+
+    [GeneratedRegex(@"\s+([,.;:!?])", RegexOptions.CultureInvariant)]
+    private static partial Regex SpaceBeforePunctuationRegex();
 }

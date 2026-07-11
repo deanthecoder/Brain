@@ -141,6 +141,25 @@ public sealed class BrainAppTests
         });
     }
 
+    [Test]
+    public void GivenHashtaggedThoughtCheckCleanAndOriginalTextAreStored()
+    {
+        using var home = new TempDirectory();
+        var store = new BrainStore(home);
+
+        var result = new BrainApp(store).Run(["Renew", "the", "domain", "#Admin", "#todo"]);
+        var entry = store.LoadEntries().Single();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result, Is.Zero);
+            Assert.That(entry.Text, Is.EqualTo("Renew the domain"));
+            Assert.That(entry.OriginalText, Is.EqualTo("Renew the domain #Admin #todo"));
+            Assert.That(entry.Tags, Is.EqualTo(new[] { "admin", "todo" }));
+            Assert.That(entry.IsTodo, Is.True);
+        });
+    }
+
     private sealed class TestSynchroniser : IBrainSynchroniser
     {
         public bool CanSynchroniseAutomatically => true;

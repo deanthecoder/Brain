@@ -32,7 +32,9 @@ public sealed class BrainStoreTests
             ["Erica"],
             ["PLAT-123"],
             ["https://example.com"],
-            ["erica@example.com"]);
+            ["erica@example.com"],
+            Tags: ["work"],
+            OriginalText: "@Erica mentioned PLAT-123 #work");
 
         store.Append(entry);
         var loadedEntry = store.LoadEntries().Single();
@@ -48,6 +50,8 @@ public sealed class BrainStoreTests
             Assert.That(loadedEntry.References, Is.EqualTo(entry.References));
             Assert.That(loadedEntry.Urls, Is.EqualTo(entry.Urls));
             Assert.That(loadedEntry.EmailAddresses, Is.EqualTo(entry.EmailAddresses));
+            Assert.That(loadedEntry.Tags, Is.EqualTo(entry.Tags));
+            Assert.That(loadedEntry.OriginalText, Is.EqualTo(entry.OriginalText));
             Assert.That(store.LoadPeople(), Is.EquivalentTo(new[] { "Erica" }));
         });
     }

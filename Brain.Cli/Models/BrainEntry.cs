@@ -20,4 +20,6 @@ internal sealed record BrainEntry(
     IReadOnlyList<string> References,
     IReadOnlyList<string> Urls,
     IReadOnlyList<string> EmailAddresses,
-    bool IsTodo = false);
+    bool IsTodo = false,
+    IReadOnlyList<string> Tags = null,
+    string OriginalText = null);

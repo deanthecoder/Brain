@@ -198,7 +198,9 @@ internal sealed class BrainStore
             People = entry.People ?? Array.Empty<string>(),
             References = entry.References ?? Array.Empty<string>(),
             Urls = entry.Urls ?? Array.Empty<string>(),
-            EmailAddresses = entry.EmailAddresses ?? Array.Empty<string>()
+            EmailAddresses = entry.EmailAddresses ?? Array.Empty<string>(),
+            Tags = entry.Tags ?? Array.Empty<string>(),
+            OriginalText = entry.OriginalText ?? entry.Text
         };
     }
 }

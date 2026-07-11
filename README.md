@@ -9,6 +9,7 @@ Brain is a small cross-platform command-line memory store for facts, decisions, 
 ```bash
 brain "@Erica says 16-bit support is not needed for PLAT-123"
 brain "@todo Renew the domain next month"
+brain "Renew the domain next month #todo #admin"
 
 brain recall "16 bit"
 brain recall "@Erica"
@@ -104,6 +105,7 @@ Brain derives useful metadata from clear signals while leaving ambiguous notes a
 
 - `@Erica` identifies a person. Later mentions of Erica are recognized automatically.
 - `@todo` marks a todo.
+- `#tag` categorizes a thought. Tags are stored separately and shown in bold in console results.
 - `PLAT-123`-style values are recorded as references.
 - Phrases such as `my wife` can imply personal context.
 - URLs and email addresses are captured as metadata.

@@ -102,14 +102,16 @@ internal sealed class BrainApp
         var entry = new BrainEntry(
             BrainIds.NewId(),
             DateTimeOffset.Now,
-            text,
+            analysis.Text,
             analysis.Context,
             analysis.ContextReason,
             analysis.People.Order(StringComparer.OrdinalIgnoreCase).ToArray(),
             analysis.References.Order(StringComparer.OrdinalIgnoreCase).ToArray(),
             analysis.Urls.Order(StringComparer.OrdinalIgnoreCase).ToArray(),
             analysis.EmailAddresses.Order(StringComparer.OrdinalIgnoreCase).ToArray(),
-            analysis.IsTodo);
+            analysis.IsTodo,
+            analysis.Tags.Order(StringComparer.OrdinalIgnoreCase).ToArray(),
+            text);
 
         m_store.Append(entry);
 
@@ -136,6 +138,12 @@ internal sealed class BrainApp
 
         if (entry.EmailAddresses.Count > 0)
             Console.WriteLine($"Email addresses: {string.Join(", ", entry.EmailAddresses)}");
+
+        if (entry.Tags.Count > 0)
+        {
+            Markdown.Write($"Tags: {FormatTags(entry.Tags)}");
+            Console.WriteLine();
+        }
 
         if (entry.IsTodo)
             Console.WriteLine("Todo: yes");
@@ -396,7 +404,13 @@ internal sealed class BrainApp
 
         Markdown.Write($"**{entry.CreatedAt:yyyy-MM-dd HH:mm}{context}{scoreText}  id {entry.Id}**");
         Console.WriteLine();
-        Console.WriteLine(entry.Text);
+        Console.Write(entry.Text);
+        if (entry.Tags.Count > 0)
+        {
+            Console.Write(' ');
+            Markdown.Write(FormatTags(entry.Tags));
+        }
+        Console.WriteLine();
 
         var extras = new List<string>();
         if (entry.People.Count > 0)
@@ -417,6 +431,8 @@ internal sealed class BrainApp
             Console.WriteLine();
         }
     }
+
+    private static string FormatTags(IEnumerable<string> tags) => string.Join(' ', tags.Select(x => $"**#{x}**"));
 
     private static void PrintHelp()
     {
@@ -450,6 +466,7 @@ internal sealed class BrainApp
 
             - `@Erica` tags Erica as a person and remembers the name.
             - `@todo` marks a thought as a todo.
+            - `#tag` categorizes a thought; hashtags are removed from its displayed text.
             - `PLAT-123` tags a Jira-style reference and implies work context.
             - `https://example.com` tags a URL.
             - `erica@example.com` tags an email address.

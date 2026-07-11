@@ -39,6 +39,18 @@ public sealed class BrainSearchTests
         Assert.That(matches.Select(x => x.Entry.Id), Is.EqualTo(new[] { "phrase", "token" }));
     }
 
+    [Test]
+    public void GivenHashtagQueryCheckOnlyMatchingTagIsReturned()
+    {
+        var admin = Entry("admin") with { Tags = ["admin"] };
+        var home = Entry("home") with { Tags = ["home"] };
+
+        var matches = BrainSearch.Search([admin, home], "#admin").ToArray();
+
+        Assert.That(matches.Select(x => x.Entry.Id), Is.EqualTo(new[] { "admin" }));
+        Assert.That(matches[0].Score, Is.EqualTo(100));
+    }
+
     private static BrainEntry Entry(
         string id,
         string text = "A remembered thought",

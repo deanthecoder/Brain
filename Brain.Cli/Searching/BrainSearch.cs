@@ -21,17 +21,20 @@ internal static class BrainSearch
         var referenceFilter = TryGetReferenceFilter(query);
         var urlFilter = TryGetUrlFilter(query);
         var emailAddressFilter = TryGetEmailAddressFilter(query);
+        var tagFilter = TryGetTagFilter(query);
         var tokens = Tokenize(query).ToArray();
 
         return entries
-            .Select(entry => new BrainMatch(entry, Score(entry, query, tokens, personFilter, referenceFilter, urlFilter, emailAddressFilter)))
+            .Select(entry => new BrainMatch(entry, Score(entry, query, tokens, personFilter, referenceFilter, urlFilter, emailAddressFilter, tagFilter)))
             .Where(match => match.Score > 0)
             .OrderByDescending(match => match.Score)
             .ThenByDescending(match => match.Entry.CreatedAt);
     }
 
-    private static int Score(BrainEntry entry, string query, string[] tokens, string personFilter, string referenceFilter, string urlFilter, string emailAddressFilter)
+    private static int Score(BrainEntry entry, string query, string[] tokens, string personFilter, string referenceFilter, string urlFilter, string emailAddressFilter, string tagFilter)
     {
+        var tags = entry.Tags ?? Array.Empty<string>();
+
         if (personFilter != null)
             return entry.People.Contains(personFilter, StringComparer.OrdinalIgnoreCase) ? 100 : 0;
 
@@ -43,6 +46,9 @@ internal static class BrainSearch
 
         if (emailAddressFilter != null)
             return entry.EmailAddresses.Contains(emailAddressFilter, StringComparer.OrdinalIgnoreCase) ? 100 : 0;
+
+        if (tagFilter != null)
+            return tags.Contains(tagFilter, StringComparer.OrdinalIgnoreCase) ? 100 : 0;
 
         var score = 0;
 
@@ -77,6 +83,13 @@ internal static class BrainSearch
                 score += 45;
         }
 
+        foreach (var tag in tags)
+        {
+            if (tag.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                query.Contains(tag, StringComparison.OrdinalIgnoreCase))
+                score += 40;
+        }
+
         foreach (var token in tokens)
         {
             if (entry.Text.Contains(token, StringComparison.OrdinalIgnoreCase))
@@ -93,6 +106,9 @@ internal static class BrainSearch
 
             if (entry.EmailAddresses.Any(x => x.Contains(token, StringComparison.OrdinalIgnoreCase)))
                 score += 15;
+
+            if (tags.Any(x => string.Equals(x, token, StringComparison.OrdinalIgnoreCase)))
+                score += 25;
         }
 
         return score;
@@ -123,6 +139,12 @@ internal static class BrainSearch
     {
         var match = Regex.Match(query.Trim(), """^[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9](?:[A-Z0-9-]*[A-Z0-9])?(?:\.[A-Z0-9](?:[A-Z0-9-]*[A-Z0-9])?)+$""", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
         return match.Success ? match.Value.ToLowerInvariant() : null;
+    }
+
+    private static string TryGetTagFilter(string query)
+    {
+        var match = Regex.Match(query.Trim(), @"^#(?<tag>[\p{L}\p{N}](?:[\p{L}\p{N}_-]*[\p{L}\p{N}])?)$", RegexOptions.CultureInvariant);
+        return match.Success ? match.Groups["tag"].Value.ToLowerInvariant() : null;
     }
 
     private static IEnumerable<string> Tokenize(string text)

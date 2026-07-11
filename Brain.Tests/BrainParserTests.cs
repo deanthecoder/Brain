@@ -56,4 +56,29 @@ public sealed class BrainParserTests
             Assert.That(analysis.People, Is.Empty);
         });
     }
+
+    [Test]
+    public void GivenHashtagsCheckTagsAreExtractedAndRemovedFromText()
+    {
+        var analysis = BrainParser.Analyse("Renew the domain #Admin #todo.", new HashSet<string>());
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(analysis.Text, Is.EqualTo("Renew the domain."));
+            Assert.That(analysis.Tags, Is.EquivalentTo(new[] { "admin", "todo" }));
+            Assert.That(analysis.IsTodo, Is.True);
+        });
+    }
+
+    [Test]
+    public void GivenHashesInCodeAndUrlsCheckTheyAreNotTags()
+    {
+        var analysis = BrainParser.Analyse("Use C# and https://example.com/page#section", new HashSet<string>());
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(analysis.Text, Is.EqualTo("Use C# and https://example.com/page#section"));
+            Assert.That(analysis.Tags, Is.Empty);
+        });
+    }
 }
