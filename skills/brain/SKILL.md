@@ -45,10 +45,14 @@ Use `brain recent <count> --json`, `brain people --json`, `brain tags --json`, o
 
 Treat "review my brain", "improve my brain", and "tidy my brain" as a read-only audit by default.
 
-1. Run `brain recent 100000 --json` to retrieve active entries.
-2. Look for exact or likely semantic duplicates, inconsistent person names, stale or unclear todos, contradictions, vague wording, and useful tag suggestions.
-3. Present numbered suggestions with affected entry IDs and the proposed result.
-4. Do not modify anything until the user explicitly approves numbered suggestions.
+1. Run `brain tags --json` to understand the existing tag vocabulary and frequency.
+2. Run `brain recent 100000 --json` to retrieve active entries.
+3. Look for exact or likely semantic duplicates, inconsistent person names, stale or unclear todos, contradictions, vague wording, missing useful tags, and tags that differ only by spelling, plurality, or near-synonyms.
+4. Prefer the user's established tags. Suggest a new tag only when it is reusable, specific enough to aid recall, and not already covered by an existing tag. Avoid category hierarchies and avoid tagging every noun.
+5. Present a compact audit summary followed by numbered, independently approvable suggestions. Include affected entry IDs, the reason, and the complete proposed replacement text with hashtags where a write would be needed.
+6. Do not modify anything until the user explicitly approves numbered suggestions.
+
+When recommending tag consolidation, name the tag to keep, tags to replace, affected entry IDs, and resulting replacement text. Aim for one to three useful tags per entry; fewer is better when ordinary recall already works.
 
 Brain recognizes hashtags in remembered text as tags and removes them from the clean display text while retaining the verbatim input. It does not yet expose untag or revise commands. Describe unsupported recommendations without claiming they were applied. For an approved consolidation or revision that can be represented safely with current commands:
 
@@ -57,7 +61,7 @@ Brain recognizes hashtags in remembered text as tags and removes them from the c
 3. Forget the replaced entry IDs with `brain forget <id> --json`.
 4. Report the new ID and forgotten IDs.
 
-Never perform this replacement sequence without explicit approval.
+Never perform this replacement sequence without explicit approval. Apply only the numbered suggestions the user approves, and rerun `brain tags --json` afterward to report the resulting vocabulary when tags changed.
 
 ## Forget
 

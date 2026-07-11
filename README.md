@@ -106,7 +106,7 @@ Ask Codex to install the public skill directly from this repository:
 
 Alternatively, clone the repository and copy `skills/brain` into `~/.codex/skills/brain`. Start a new Codex task after installation so the skill is discovered.
 
-The skill requires the `brain` command to be installed on the same computer as Codex. It uses Brain's JSON output and never edits the storage files directly. Reviews are read-only until you approve specific changes.
+The skill requires the `brain` command to be installed on the same computer as Codex. It uses Brain's JSON output and never edits the storage files directly. Reviews check for duplicates, unclear memories, and inconsistent or missing tags; they remain read-only until you approve specific changes.
 
 ## Conventions
 
