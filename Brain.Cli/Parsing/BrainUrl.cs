@@ -15,11 +15,15 @@ namespace Brain.Cli.Parsing;
 internal static partial class BrainUrl
 {
     private static readonly char[] TrailingPunctuation = ['.', ',', ';', ':', '!', '?', ')', ']', '}'];
+    private static readonly HashSet<string> FileExtensions = new([
+        "cs", "csproj", "dll", "dmg", "exe", "json", "md", "sln", "slnx", "txt", "xml", "yaml", "yml"
+    ], StringComparer.OrdinalIgnoreCase);
 
     public static IEnumerable<string> FindAll(string text)
     {
         return UrlRegex()
             .Matches(text)
+            .Where(x => IsPlausibleUrl(x.Value))
             .Select(x => Normalise(x.Value))
             .Where(x => x.Length > 0);
     }
@@ -28,7 +32,7 @@ internal static partial class BrainUrl
     {
         var value = text.Trim();
         var match = UrlRegex().Match(value);
-        if (!match.Success || match.Index != 0 || match.Length != value.Length)
+        if (!match.Success || match.Index != 0 || match.Length != value.Length || !IsPlausibleUrl(match.Value))
         {
             url = null;
             return false;
@@ -39,6 +43,19 @@ internal static partial class BrainUrl
     }
 
     private static string Normalise(string value) => value.TrimEnd(TrailingPunctuation);
+
+    private static bool IsPlausibleUrl(string value)
+    {
+        if (value.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+            value.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
+            value.StartsWith("www.", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        var host = value.Split('/', '?', '#')[0].Split(':')[0];
+        var topLevelDomain = host[(host.LastIndexOf('.') + 1)..];
+        return !FileExtensions.Contains(topLevelDomain) &&
+               (topLevelDomain.All(char.IsLower) || topLevelDomain.All(char.IsUpper));
+    }
 
     [GeneratedRegex("""(?<![\w@])(?:(?:(?:https?://)|(?:www\.))[^\s<>\"']+|(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+[A-Z]{2,63}(?::\d+)?(?:[/?#][^\s<>\"']*)?)""", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex UrlRegex();

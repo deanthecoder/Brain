@@ -105,4 +105,13 @@ public sealed class BrainParserTests
             Assert.That(analysis.Urls, Is.Empty);
         });
     }
+
+    [Test]
+    public void GivenDottedCodeNamesCheckTheyAreNotRecognisedAsUrls()
+    {
+        var analysis = BrainParser.Analyse("Use DTC.Core.ViewModels.ViewModelBase, Assert.That, string.Empty, and /Repos/AGENTS.md.", new HashSet<string>());
+
+        Assert.That(analysis.Urls, Is.Empty);
+        Assert.That(analysis.Tags, Is.Empty);
+    }
 }
