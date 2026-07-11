@@ -216,6 +216,25 @@ public sealed class BrainAppTests
         Assert.That(results.GetArrayLength(), Is.EqualTo(3));
     }
 
+    [Test]
+    public void GivenTagsCheckTableUsesColumnsWithoutHashPrefixes()
+    {
+        var tags = Enumerable.Range(1, 12)
+            .Select(x => new BrainApp.TagSummary($"tag{x:00}", x))
+            .ToArray();
+
+        var lines = BrainApp.FormatTagTable(tags);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(lines, Has.Count.LessThan(tags.Length));
+            Assert.That(lines, Has.All.Length.LessThanOrEqualTo(80));
+            Assert.That(lines, Has.All.Not.Contains("#"));
+            Assert.That(lines.Any(x => x.Contains("     ")), Is.True);
+            Assert.That(string.Join(' ', lines), Does.Contain("tag01 (1)").And.Contain("tag12 (12)"));
+        });
+    }
+
     private static BrainStore StoreMatchingEntries(DirectoryInfo home, int count)
     {
         var store = new BrainStore(home);

@@ -55,6 +55,8 @@ brain tags
 brain todos
 ```
 
+`brain tags` displays tag counts in columns up to 80 characters wide. Use `--json` for structured tag data.
+
 Recall returns every matching entry by default. Add `--count <number>` (or `-count <number>`) when you only want the highest-ranked matches. Output includes each entry's ID; use it to forget something:
 
 ```bash

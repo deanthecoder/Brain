@@ -315,11 +315,8 @@ internal sealed class BrainApp
             return 0;
         }
 
-        foreach (var tag in tags)
-        {
-            Markdown.Write($"**#{tag.Tag}** ({tag.Count})");
-            Console.WriteLine();
-        }
+        foreach (var line in FormatTagTable(tags))
+            Console.WriteLine(line);
 
         return 0;
     }
@@ -513,6 +510,36 @@ internal sealed class BrainApp
 
     private static string FormatTags(IEnumerable<string> tags) => string.Join(' ', tags.Select(x => $"**#{x}**"));
 
+    internal static IReadOnlyList<string> FormatTagTable(IReadOnlyList<TagSummary> tags, int maximumWidth = 80, int spacing = 5)
+    {
+        var values = tags.Select(x => $"{x.Tag} ({x.Count})").ToArray();
+
+        for (var rowCount = 1; rowCount <= values.Length; rowCount++)
+        {
+            var columnCount = (values.Length + rowCount - 1) / rowCount;
+            var columnWidths = Enumerable.Range(0, columnCount)
+                .Select(column => values.Skip(column * rowCount).Take(rowCount).Max(x => x.Length))
+                .ToArray();
+
+            if (columnWidths.Sum() + spacing * (columnCount - 1) > maximumWidth)
+                continue;
+
+            return Enumerable.Range(0, rowCount)
+                .Select(row => string.Concat(Enumerable.Range(0, columnCount).Select(column =>
+                {
+                    var index = column * rowCount + row;
+                    if (index >= values.Length)
+                        return string.Empty;
+
+                    var isLastValueInRow = index + rowCount >= values.Length;
+                    return isLastValueInRow ? values[index] : values[index].PadRight(columnWidths[column] + spacing);
+                })).TrimEnd())
+                .ToArray();
+        }
+
+        return values;
+    }
+
     private static void PrintHelp()
     {
         Markdown.Write("""
@@ -569,7 +596,7 @@ internal sealed class BrainApp
 
     private static string JoinWords(string[] words) => string.Join(' ', words).Trim();
 
-    private sealed record TagSummary(string Tag, int Count);
+    internal sealed record TagSummary(string Tag, int Count);
 
     private static bool IsHelp(string arg) => arg is "-h" or "--help" or "help";
 
