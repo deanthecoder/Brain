@@ -69,6 +69,7 @@ internal sealed class BrainApp
                 "recall" or "search" or "find" => Recall(args[1..], json),
                 "recent" => Recent(args[1..], json),
                 "people" => People(json),
+                "tags" => Tags(json),
                 "todo" or "todos" => Todos(json),
                 "forget" => Forget(args[1..], json),
                 "path" => Path(json),
@@ -266,6 +267,34 @@ internal sealed class BrainApp
         return 0;
     }
 
+    private int Tags(bool json)
+    {
+        var tags = m_store.LoadTagCounts()
+            .OrderBy(x => x.Key, StringComparer.OrdinalIgnoreCase)
+            .Select(x => new TagSummary(x.Key, x.Value))
+            .ToArray();
+
+        if (json)
+        {
+            WriteJson(tags);
+            return 0;
+        }
+
+        if (tags.Length == 0)
+        {
+            Console.WriteLine("No tags known yet. Use #tag in a note to add one.");
+            return 0;
+        }
+
+        foreach (var tag in tags)
+        {
+            Markdown.Write($"**#{tag.Tag}** ({tag.Count})");
+            Console.WriteLine();
+        }
+
+        return 0;
+    }
+
     private int Forget(string[] args, bool json)
     {
         if (args.Length != 1 || string.IsNullOrWhiteSpace(args[0]))
@@ -357,7 +386,7 @@ internal sealed class BrainApp
 
     private static bool RequiresPush(string command)
     {
-        return command == "forget" || command is not ("recall" or "search" or "find" or "recent" or "people" or "todo" or "todos" or "path" or "drive");
+        return command == "forget" || command is not ("recall" or "search" or "find" or "recent" or "people" or "tags" or "todo" or "todos" or "path" or "drive");
     }
 
     private static void TryPull(IBrainSynchroniser synchroniser)
@@ -450,6 +479,7 @@ internal sealed class BrainApp
             | `brain recall <query>` | Search remembered thoughts |
             | `brain recent [count]` | Show recent thoughts |
             | `brain people` | Show known people |
+            | `brain tags` | Show known tags and entry counts |
             | `brain todos` | Show remembered todos |
             | `brain forget <id>` | Forget an entry |
             | `brain path` | Show the storage path |
@@ -486,6 +516,8 @@ internal sealed class BrainApp
     }
 
     private static string JoinWords(string[] words) => string.Join(' ', words).Trim();
+
+    private sealed record TagSummary(string Tag, int Count);
 
     private static bool IsHelp(string arg) => arg is "-h" or "--help" or "help";
 

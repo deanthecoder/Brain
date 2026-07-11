@@ -50,6 +50,7 @@ brain recall "flowers"
 brain recent
 brain recent 20
 brain people
+brain tags
 brain todos
 ```
 
@@ -120,6 +121,7 @@ brain add <text>             Remember a thought
 brain recall <query>         Search remembered thoughts
 brain recent [count]         Show recent thoughts
 brain people                 Show known people
+brain tags                   Show known tags and entry counts
 brain todos                  Show remembered todos
 brain forget <id>            Forget an entry
 brain path                   Show the storage path

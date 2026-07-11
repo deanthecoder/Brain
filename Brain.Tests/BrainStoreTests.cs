@@ -112,4 +112,36 @@ public sealed class BrainStoreTests
             Assert.That(store.GetSyncFiles().Select(x => x.Name), Is.EquivalentTo(new[] { "entry-note-1.json", "forgotten-note-1.json" }));
         });
     }
+
+    [Test]
+    public void GivenTaggedEntriesCheckTagCountsAreCollatedCaseInsensitively()
+    {
+        using var home = new TempDirectory();
+        var store = new BrainStore(home);
+        store.Append(Entry("one", ["admin", "todo"]));
+        store.Append(Entry("two", ["Admin"]));
+
+        var tags = store.LoadTagCounts();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(tags["admin"], Is.EqualTo(2));
+            Assert.That(tags["todo"], Is.EqualTo(1));
+        });
+    }
+
+    private static BrainEntry Entry(string id, IReadOnlyList<string> tags)
+    {
+        return new BrainEntry(
+            id,
+            DateTimeOffset.UtcNow,
+            "A remembered thought",
+            null,
+            null,
+            Array.Empty<string>(),
+            Array.Empty<string>(),
+            Array.Empty<string>(),
+            Array.Empty<string>(),
+            Tags: tags);
+    }
 }

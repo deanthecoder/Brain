@@ -39,7 +39,7 @@ Treat "ask my brain", "check my brain", and "what does my brain know" as authori
 5. Include compact supporting entry IDs and dates when they help the user verify or act on the answer.
 6. If evidence is absent, weak, outdated, or contradictory, say so. Never fill gaps as though Brain contained the answer.
 
-Use `brain recent <count> --json`, `brain people --json`, or `brain todos --json` when the request specifically concerns recency, people, or todos.
+Use `brain recent <count> --json`, `brain people --json`, `brain tags --json`, or `brain todos --json` when the request specifically concerns recency, people, tags, or todos.
 
 ## Review
 

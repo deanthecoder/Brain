@@ -66,6 +66,14 @@ internal sealed class BrainStore
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 
+    public IReadOnlyDictionary<string, int> LoadTagCounts()
+    {
+        return LoadEntries()
+            .SelectMany(x => x.Tags)
+            .GroupBy(x => x, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(x => x.Key, x => x.Count(), StringComparer.OrdinalIgnoreCase);
+    }
+
     public IEnumerable<FileInfo> GetEntryFiles()
     {
         return EntriesDirectory.EnumerateFiles("entry-*.json", SearchOption.TopDirectoryOnly);
