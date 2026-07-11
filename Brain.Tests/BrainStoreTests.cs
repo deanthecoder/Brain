@@ -130,6 +130,28 @@ public sealed class BrainStoreTests
         });
     }
 
+    [Test]
+    public void GivenEntriesCheckExportWritesReadableJsonInDateOrder()
+    {
+        using var home = new TempDirectory();
+        var store = new BrainStore(home);
+        store.Append(Entry("later", ["admin"]) with { CreatedAt = DateTimeOffset.Parse("2026-07-11T12:00:00Z") });
+        store.Append(Entry("earlier", ["home"]) with { CreatedAt = DateTimeOffset.Parse("2026-07-11T10:00:00Z") });
+        var destination = new FileInfo(Path.Combine(home.FullName, "backup", "brain.json"));
+
+        var count = store.Export(destination);
+        using var document = JsonDocument.Parse(File.ReadAllText(destination.FullName));
+        var entries = document.RootElement.EnumerateArray().ToArray();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(count, Is.EqualTo(2));
+            Assert.That(entries[0].GetProperty("id").GetString(), Is.EqualTo("earlier"));
+            Assert.That(entries[1].GetProperty("id").GetString(), Is.EqualTo("later"));
+            Assert.That(File.ReadAllText(destination.FullName), Does.Contain(Environment.NewLine + "  {"));
+        });
+    }
+
     private static BrainEntry Entry(string id, IReadOnlyList<string> tags)
     {
         return new BrainEntry(

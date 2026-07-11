@@ -74,6 +74,18 @@ internal sealed class BrainStore
             .ToDictionary(x => x.Key, x => x.Count(), StringComparer.OrdinalIgnoreCase);
     }
 
+    public int Export(FileInfo destination)
+    {
+        var entries = LoadEntries()
+            .OrderBy(x => x.CreatedAt)
+            .ToArray();
+        var options = new JsonSerializerOptions(BrainJson.Options) { WriteIndented = true };
+
+        destination.Directory?.Create();
+        File.WriteAllText(destination.FullName, JsonSerializer.Serialize(entries, options) + Environment.NewLine);
+        return entries.Length;
+    }
+
     public IEnumerable<FileInfo> GetEntryFiles()
     {
         return EntriesDirectory.EnumerateFiles("entry-*.json", SearchOption.TopDirectoryOnly);

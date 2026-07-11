@@ -72,6 +72,7 @@ internal sealed class BrainApp
                 "tags" => Tags(json),
                 "todo" or "todos" => Todos(json),
                 "forget" => Forget(args[1..], json),
+                "export" => Export(args[1..], json),
                 "path" => Path(json),
                 "drive" => Drive(args[1..], json),
                 _ => Add(args, json)
@@ -321,6 +322,22 @@ internal sealed class BrainApp
         return 0;
     }
 
+    private int Export(string[] args, bool json)
+    {
+        if (args.Length != 1 || string.IsNullOrWhiteSpace(args[0]))
+            throw new BrainUsageException("Export expects a destination file.");
+
+        var destination = new FileInfo(System.IO.Path.GetFullPath(args[0]));
+        var count = m_store.Export(destination);
+
+        if (json)
+            WriteJson(new { path = destination.FullName, count });
+        else
+            Console.WriteLine($"Exported {count} {(count == 1 ? "entry" : "entries")} to {destination.FullName}.");
+
+        return 0;
+    }
+
     private int Drive(string[] args, bool json)
     {
         if (args.Length == 0)
@@ -395,7 +412,7 @@ internal sealed class BrainApp
 
     private static bool RequiresPush(string command)
     {
-        return command == "forget" || command is not ("recall" or "search" or "find" or "recent" or "people" or "tags" or "todo" or "todos" or "path" or "drive");
+        return command == "forget" || command is not ("recall" or "search" or "find" or "recent" or "people" or "tags" or "todo" or "todos" or "export" or "path" or "drive");
     }
 
     private static void TryPull(IBrainSynchroniser synchroniser)
@@ -491,6 +508,7 @@ internal sealed class BrainApp
             | `brain tags` | Show known tags and entry counts |
             | `brain todos` | Show remembered todos |
             | `brain forget <id>` | Forget an entry |
+            | `brain export <file>` | Export active entries as JSON |
             | `brain path` | Show the storage path |
             | `brain drive connect` | Connect a Google Drive account |
             | `brain drive sync` | Sync entries with Google Drive |

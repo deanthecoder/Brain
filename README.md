@@ -62,6 +62,12 @@ brain forget 88e961720efc3bcf
 
 Forgotten entries are synchronized as tombstones, so another computer will not restore them.
 
+Export active memories to a readable JSON file for backup or use with another tool:
+
+```bash
+brain export brain-backup.json
+```
+
 ## Sync with Google Drive
 
 Connect each computer once:
@@ -126,6 +132,7 @@ brain people                 Show known people
 brain tags                   Show known tags and entry counts
 brain todos                  Show remembered todos
 brain forget <id>            Forget an entry
+brain export <file>          Export active entries as JSON
 brain path                   Show the storage path
 brain drive connect          Connect Google Drive
 brain drive sync             Synchronize now
