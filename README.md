@@ -1,44 +1,114 @@
 # Brain
 
-A tiny cross-platform tool for remembering things.
+Remember something now. Find it when you need it.
 
-Brain is a small command-line memory stream. It is intentionally minimal: capture a thought quickly, recall it later, and keep the original text intact.
-
-## Current shape
+Brain is a small cross-platform command-line memory store for facts, decisions, people, links, and todos. Capturing a thought takes one command, the original wording stays intact, and optional Google Drive sync keeps the same memories available across your computers.
 
 ```bash
-brain "@Erica tells me I don't have to worry about 16 bit support for PLAT-123"
-brain "My wife loves getting flowers"
+brain "@Erica says 16-bit support is not needed for PLAT-123"
+brain "@todo Renew the domain next month"
 
 brain recall "16 bit"
 brain recall "@Erica"
+brain todos
+```
+
+## Why Brain?
+
+- **Fast capture:** write a thought without choosing a document or organizing it first.
+- **Simple recall:** search the original text, people, references, links, and todos.
+- **Private storage:** memories live as readable JSON files on your computer.
+- **Cross-machine sync:** connect Google Drive once on each computer; no API setup or credentials file is required.
+- **Codex integration:** say "ask my brain" or "remember in my brain" and let Codex interpret the request.
+
+## Install
+
+Download the installer for your platform from [GitHub Releases](https://github.com/deanthecoder/Brain/releases):
+
+- Windows: `Brain-<version>-win-x64.exe`
+- Apple Silicon Mac: `Brain-<version>-osx-arm64.dmg`
+- Intel Mac: `Brain-<version>-osx-x64.dmg`
+
+Run the installer, then open a new terminal. The `brain` command will be available on your path.
+
+## Remember and Recall
+
+Remember a thought directly or with the explicit `add` command:
+
+```bash
+brain "My wife loves getting flowers"
+brain add "@Bob recommended Google Drive for Brain"
+```
+
+Search and browse your memories:
+
+```bash
+brain recall "flowers"
 brain recent
+brain recent 20
+brain people
+brain todos
 ```
 
-Brain stores each entry as an immutable JSON file. It can optionally sync those files through Google Drive's private application-data folder. The point is to make the core habit feel good before adding more machinery.
-
-## Build
-
-Brain currently targets .NET 8, matching `DTC.Core`.
+Recall output includes each entry's ID. Use it to forget something:
 
 ```bash
-git submodule update --init --recursive
-dotnet build Brain.sln
+brain forget 88e961720efc3bcf
 ```
 
-## Installers
+Forgotten entries are synchronized as tombstones, so another computer will not restore them.
 
-Brain uses `DTC.Installer` to build self-contained Windows and macOS installers. The installers expose `brain` on the command path, so a new terminal can run it without locating the executable manually.
+## Sync with Google Drive
 
-Build installers locally from the repository root:
+Connect each computer once:
 
 ```bash
-python Installer/pack.py
+brain drive connect
 ```
 
-Windows produces an Inno Setup installer. macOS produces Apple Silicon and Intel DMGs, each containing a native package installer. Release installers can also be built from the GitHub Actions workflow.
+Brain opens Google's consent screen and requests access only to its private application-data folder. After connection, Brain pushes changes after capture and periodically pulls changes before reads.
 
-## Commands
+Useful sync commands:
+
+```bash
+brain drive status
+brain drive sync
+brain drive disconnect
+```
+
+Use `--offline` when a command should not synchronize.
+
+## Use Brain with Codex
+
+The included Codex skill recognizes the phrase **"my brain"**. Once installed, try:
+
+- "Ask my brain what we decided about iOS."
+- "Check my brain for anything Bob said about installers."
+- "Add to my brain: the next release should be version 0.2."
+- "Remember in my brain that Erica owns PLAT-123."
+- "Review my brain and suggest duplicates or unclear memories."
+
+Ask Codex to install the public skill directly from this repository:
+
+> Install the Brain skill from `https://github.com/deanthecoder/Brain/tree/main/skills/brain`.
+
+Alternatively, clone the repository and copy `skills/brain` into `~/.codex/skills/brain`. Start a new Codex task after installation so the skill is discovered.
+
+The skill requires the `brain` command to be installed on the same computer as Codex. It uses Brain's JSON output and never edits the storage files directly. Reviews are read-only until you approve specific changes.
+
+## Conventions
+
+Brain derives useful metadata from clear signals while leaving ambiguous notes alone:
+
+- `@Erica` identifies a person. Later mentions of Erica are recognized automatically.
+- `@todo` marks a todo.
+- `PLAT-123`-style values are recorded as references.
+- Phrases such as `my wife` can imply personal context.
+- URLs and email addresses are captured as metadata.
+
+These hints are deterministic; Brain does not use AI to rewrite or reinterpret stored text.
+
+## Command Reference
 
 ```text
 brain <text>                 Remember a thought
@@ -49,51 +119,41 @@ brain people                 Show known people
 brain todos                  Show remembered todos
 brain forget <id>            Forget an entry
 brain path                   Show the storage path
-brain drive connect         Connect Google Drive
-brain drive sync             Sync entries with Google Drive
-brain drive status           Show Google Drive connection status
-brain drive disconnect       Forget the Google Drive connection
+brain drive connect          Connect Google Drive
+brain drive sync             Synchronize now
+brain drive status           Show connection status
+brain drive disconnect       Forget the Google connection
 ```
 
-Add `--json` or `-json` to emit machine-readable output:
+Global options accept one or two dashes:
 
-```bash
-brain recall PLAT-123 --json
-```
-
-Global switches accept either one or two dashes, for example `-home C:\BrainData` or `--offline`.
+- `--json` emits machine-readable JSON.
+- `--offline` skips automatic synchronization.
+- `--home <path>` uses a different storage directory.
 
 In PowerShell, quote text and queries containing `@`, for example `brain recall "@Erica"`.
 
-## Tiny conventions
-
-- `@Erica` marks Erica as a person and remembers that name for future entries.
-- `@todo` marks a thought as a todo. Use `brain todos` to collate them.
-- Later mentions of `Erica` are tagged automatically once Brain knows the person.
-- `PLAT-123`-style references are captured as references and currently imply `work` context.
-- Phrases like `my wife` imply `personal` context.
-- HTTP(S) and `www.` URLs, plus email addresses, are captured as entry metadata.
-
-Human-readable recall, recent, and todo output includes an entry ID. Use it with `brain forget <id>` to remove an entry; forgotten entries are synchronised as tombstones so they are not restored by another machine.
-
-These are deterministic hints, not AI guesses. Strong signals are recorded; ambiguous notes are left alone.
-
 ## Storage
 
-By default Brain stores data in the DTC.Core per-application settings directory. Use `brain path` to display the exact location for the current platform and installation.
+Run `brain path` to display the storage location for the current installation. Each thought is an immutable JSON file, and known people are derived from those entries rather than maintained in a separate index.
 
-Each remembered thought is stored as an immutable JSON file in `entries`. Known people are derived from those entries, rather than stored in a separate index.
+Google Drive synchronization uses Brain's private `appDataFolder`. The refresh token is stored in Brain's per-user settings. Brain uses a bundled Desktop OAuth client with PKCE; users do not need environment variables or Google developer credentials.
 
-## Google Drive
+## Build from Source
 
-`brain drive connect` opens Google's OAuth consent flow and requests only access to Brain's private `appDataFolder`. The Google refresh token is stored in Brain's normal per-user settings file. Brain uses its bundled Desktop OAuth client with PKCE, so users do not need credentials files or environment variables.
+Brain targets .NET 8 and uses the `DTC.Core` and `DTC.Installer` submodules.
 
-Once connected, Brain pulls from Google Drive before reads when its last pull was at least one hour ago, and pushes after every capture. `brain drive sync` remains available for an explicit full sync, while `--offline` skips automatic sync for one command.
+```bash
+git clone --recurse-submodules https://github.com/deanthecoder/Brain.git
+cd Brain
+dotnet build Brain.sln
+dotnet test Brain.sln
+```
 
-On Windows this is normally:
+Build platform installers from the repository root with:
 
-```text
-%APPDATA%\brain
+```bash
+python Installer/pack.py
 ```
 
 ## Philosophy
