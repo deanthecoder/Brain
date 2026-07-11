@@ -1,3 +1,5 @@
+[![Twitter Follow](https://img.shields.io/twitter/follow/deanthecoder?style=social)](https://twitter.com/deanthecoder)
+
 # Brain
 
 Remember something now. Find it when you need it.
@@ -159,3 +161,7 @@ python Installer/pack.py
 ## Philosophy
 
 Capturing a thought should be faster than deciding where to put it.
+
+## License
+
+MIT © Dean Edis. See `LICENSE` for details.
