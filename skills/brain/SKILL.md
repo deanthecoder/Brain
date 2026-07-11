@@ -25,7 +25,7 @@ brain add <verbatim text> --json
 
 - Preserve the text after the trigger verbatim unless the user asks for editing.
 - Do not add inferred facts or a generated summary as a separate memory.
-- Report the returned entry ID concisely.
+- Brain returns the existing entry when the same text has already been remembered. Report the returned entry ID concisely without retrying the write.
 - If the text to store is ambiguous, ask before writing.
 
 ## Recall

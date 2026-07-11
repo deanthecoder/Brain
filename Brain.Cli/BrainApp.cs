@@ -24,6 +24,7 @@ internal sealed class BrainApp
 
     private BrainStore m_store;
     private readonly Func<BrainStore, IBrainSynchroniser> m_syncFactory;
+    private bool m_hasChanges;
 
     public BrainApp()
         : this(null)
@@ -55,6 +56,7 @@ internal sealed class BrainApp
             }
 
             m_store ??= new BrainStore(BrainPaths.GetHome(home));
+            m_hasChanges = false;
 
             var command = args[0].ToLowerInvariant();
             var synchroniser = m_syncFactory(m_store);
@@ -78,7 +80,7 @@ internal sealed class BrainApp
                 _ => Add(args, json)
             };
 
-            if (synchroniseAutomatically && RequiresPush(command))
+            if (synchroniseAutomatically && m_hasChanges)
                 TryPush(synchroniser);
 
             return result;
@@ -98,6 +100,20 @@ internal sealed class BrainApp
         if (string.IsNullOrWhiteSpace(text))
             throw new BrainUsageException("Nothing to remember.");
 
+        var existingEntry = m_store.FindByOriginalText(text);
+        if (existingEntry != null)
+        {
+            if (json)
+                WriteJson(existingEntry);
+            else
+            {
+                Markdown.Write($"**Already remembered.**  id {existingEntry.Id}");
+                Console.WriteLine();
+            }
+
+            return 0;
+        }
+
         var people = m_store.LoadPeople();
         var analysis = BrainParser.Analyse(text, people);
 
@@ -116,6 +132,7 @@ internal sealed class BrainApp
             text);
 
         m_store.Append(entry);
+        m_hasChanges = true;
 
         if (json)
         {
@@ -303,6 +320,7 @@ internal sealed class BrainApp
 
         var id = args[0].Trim();
         m_store.Forget(id);
+        m_hasChanges = true;
 
         if (json)
             WriteJson(new { id, forgotten = true });
@@ -408,11 +426,6 @@ internal sealed class BrainApp
             Console.WriteLine("Google Drive disconnected.");
 
         return 0;
-    }
-
-    private static bool RequiresPush(string command)
-    {
-        return command == "forget" || command is not ("recall" or "search" or "find" or "recent" or "people" or "tags" or "todo" or "todos" or "export" or "path" or "drive");
     }
 
     private static void TryPull(IBrainSynchroniser synchroniser)

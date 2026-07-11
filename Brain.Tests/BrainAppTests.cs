@@ -160,6 +160,39 @@ public sealed class BrainAppTests
         });
     }
 
+    [Test]
+    public void GivenDuplicateThoughtCheckExistingEntryIsKeptAndSecondPushIsSkipped()
+    {
+        using var home = new TempDirectory();
+        var store = new BrainStore(home);
+        var synchroniser = new TestSynchroniser();
+        var app = new BrainApp(store, _ => synchroniser);
+
+        var firstResult = app.Run(["A remembered thought"]);
+        var secondResult = app.Run(["a REMEMBERED thought"]);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(firstResult, Is.Zero);
+            Assert.That(secondResult, Is.Zero);
+            Assert.That(store.LoadEntries(), Has.Count.EqualTo(1));
+            Assert.That(synchroniser.PushCount, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public void GivenSameTextWithDifferentTagsCheckBothEntriesAreRemembered()
+    {
+        using var home = new TempDirectory();
+        var store = new BrainStore(home);
+        var app = new BrainApp(store);
+
+        app.Run(["A remembered thought #home"]);
+        app.Run(["A remembered thought #work"]);
+
+        Assert.That(store.LoadEntries(), Has.Count.EqualTo(2));
+    }
+
     private sealed class TestSynchroniser : IBrainSynchroniser
     {
         public bool CanSynchroniseAutomatically => true;

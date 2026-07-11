@@ -112,6 +112,7 @@ The skill requires the `brain` command to be installed on the same computer as C
 
 Brain derives useful metadata from clear signals while leaving ambiguous notes alone:
 
+- Remembering the same text again, ignoring letter case, returns the existing entry instead of creating a duplicate.
 - `@Erica` identifies a person. Later mentions of Erica are recognized automatically.
 - `@todo` marks a todo.
 - `#tag` categorizes a thought. Tags are stored separately and shown in bold in console results.

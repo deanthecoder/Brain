@@ -58,6 +58,13 @@ internal sealed class BrainStore
             .ToArray();
     }
 
+    public BrainEntry FindByOriginalText(string text)
+    {
+        return LoadEntries()
+            .OrderBy(x => x.CreatedAt)
+            .FirstOrDefault(x => string.Equals(x.OriginalText, text, StringComparison.OrdinalIgnoreCase));
+    }
+
     public HashSet<string> LoadPeople()
     {
         return LoadEntries()
