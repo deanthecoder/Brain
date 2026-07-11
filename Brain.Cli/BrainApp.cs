@@ -576,6 +576,7 @@ internal sealed class BrainApp
             - `@Erica` tags Erica as a person and remembers the name.
             - `@todo` marks a thought as a todo.
             - `#tag` categorizes a thought; hashtags are removed from its displayed text.
+            - URLs are automatically tagged `url`.
             - `PLAT-123` tags a Jira-style reference and implies work context.
             - `https://example.com` tags a URL.
             - `erica@example.com` tags an email address.

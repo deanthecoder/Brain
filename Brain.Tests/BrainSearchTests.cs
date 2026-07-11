@@ -51,6 +51,18 @@ public sealed class BrainSearchTests
         Assert.That(matches[0].Score, Is.EqualTo(100));
     }
 
+    [Test]
+    public void GivenBareDomainQueryCheckUrlsOnDomainAreReturned()
+    {
+        var github = Entry("github") with { Urls = ["github.com/deanthecoder"] };
+        var example = Entry("example") with { Urls = ["example.com"] };
+
+        var matches = BrainSearch.Search([github, example], "github.com").ToArray();
+
+        Assert.That(matches.Select(x => x.Entry.Id), Is.EqualTo(new[] { "github" }));
+        Assert.That(matches[0].Score, Is.EqualTo(100));
+    }
+
     private static BrainEntry Entry(
         string id,
         string text = "A remembered thought",

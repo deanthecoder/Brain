@@ -78,7 +78,31 @@ public sealed class BrainParserTests
         Assert.Multiple(() =>
         {
             Assert.That(analysis.Text, Is.EqualTo("Use C# and https://example.com/page#section"));
-            Assert.That(analysis.Tags, Is.Empty);
+            Assert.That(analysis.Tags, Is.EquivalentTo(new[] { "url" }));
+        });
+    }
+
+    [Test]
+    public void GivenBareDomainWithPathCheckUrlIsRecognised()
+    {
+        var analysis = BrainParser.Analyse("My projects are under github.com/deanthecoder.", new HashSet<string>());
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(analysis.Urls, Is.EquivalentTo(new[] { "github.com/deanthecoder" }));
+            Assert.That(analysis.Tags, Is.EquivalentTo(new[] { "url" }));
+        });
+    }
+
+    [Test]
+    public void GivenEmailAddressCheckDomainIsNotAlsoRecognisedAsUrl()
+    {
+        var analysis = BrainParser.Analyse("Email dean@example.com about it.", new HashSet<string>());
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(analysis.EmailAddresses, Is.EquivalentTo(new[] { "dean@example.com" }));
+            Assert.That(analysis.Urls, Is.Empty);
         });
     }
 }

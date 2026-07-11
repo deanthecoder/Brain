@@ -31,10 +31,7 @@ internal static partial class BrainParser
             .Select(x => x.Value.ToUpperInvariant())
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        var urls = UrlRegex()
-            .Matches(text)
-            .Select(x => x.Value.TrimEnd('.', ',', ';', ':', '!', '?', ')', ']', '}'))
-            .Where(x => x.Length > 0)
+        var urls = BrainUrl.FindAll(text)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         var emailAddresses = EmailAddressRegex()
@@ -46,6 +43,8 @@ internal static partial class BrainParser
             .Matches(text)
             .Select(x => x.Groups["tag"].Value.ToLowerInvariant())
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (urls.Count > 0)
+            tags.Add("url");
 
         var cleanText = WhitespaceRegex().Replace(HashtagRegex().Replace(text, " "), " ").Trim();
         cleanText = SpaceBeforePunctuationRegex().Replace(cleanText, "$1");
@@ -99,9 +98,6 @@ internal static partial class BrainParser
 
     [GeneratedRegex(@"\b[A-Z][A-Z0-9]+-\d+\b", RegexOptions.CultureInvariant)]
     private static partial Regex ReferenceRegex();
-
-    [GeneratedRegex("""(?<![\w@])(?:(?:https?://)|(?:www\.))[^\s<>\"']+""", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
-    private static partial Regex UrlRegex();
 
     [GeneratedRegex("""(?<![\w@])[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9](?:[A-Z0-9-]*[A-Z0-9])?(?:\.[A-Z0-9](?:[A-Z0-9-]*[A-Z0-9])?)+(?![\w@])""", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex EmailAddressRegex();

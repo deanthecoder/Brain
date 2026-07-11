@@ -119,9 +119,10 @@ Brain derives useful metadata from clear signals while leaving ambiguous notes a
 - `@Erica` identifies a person. Later mentions of Erica are recognized automatically.
 - `@todo` marks a todo.
 - `#tag` categorizes a thought. Tags are stored separately and shown in bold in console results.
+- Entries containing a URL are automatically tagged `url`, so `brain recall "#url"` lists remembered links.
 - `PLAT-123`-style values are recorded as references.
 - Phrases such as `my wife` can imply personal context.
-- URLs and email addresses are captured as metadata.
+- URLs with or without a protocol, plus email addresses, are captured as metadata.
 
 These hints are deterministic; Brain does not use AI to rewrite or reinterpret stored text.
 

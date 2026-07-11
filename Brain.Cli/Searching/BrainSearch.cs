@@ -9,6 +9,7 @@
 // THE SOFTWARE IS PROVIDED AS IS, WITHOUT WARRANTY OF ANY KIND.
 
 using Brain.Cli.Models;
+using Brain.Cli.Parsing;
 using System.Text.RegularExpressions;
 
 namespace Brain.Cli.Searching;
@@ -42,7 +43,7 @@ internal static class BrainSearch
             return entry.References.Contains(referenceFilter, StringComparer.OrdinalIgnoreCase) ? 100 : 0;
 
         if (urlFilter != null)
-            return entry.Urls.Contains(urlFilter, StringComparer.OrdinalIgnoreCase) ? 100 : 0;
+            return entry.Urls.Any(x => x.Contains(urlFilter, StringComparison.OrdinalIgnoreCase)) ? 100 : 0;
 
         if (emailAddressFilter != null)
             return entry.EmailAddresses.Contains(emailAddressFilter, StringComparer.OrdinalIgnoreCase) ? 100 : 0;
@@ -131,8 +132,7 @@ internal static class BrainSearch
 
     private static string TryGetUrlFilter(string query)
     {
-        var match = Regex.Match(query.Trim(), """^(?:(?:https?://)|(?:www\.))[^\s<>\"']+$""", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-        return match.Success ? match.Value.TrimEnd('.', ',', ';', ':', '!', '?', ')', ']', '}') : null;
+        return BrainUrl.TryParse(query, out var url) ? url : null;
     }
 
     private static string TryGetEmailAddressFilter(string query)
