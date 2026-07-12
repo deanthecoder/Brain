@@ -9,6 +9,7 @@
 // THE SOFTWARE IS PROVIDED AS IS, WITHOUT WARRANTY OF ANY KIND.
 
 using Brain.Cli.Parsing;
+using DTC.Core;
 
 namespace Brain.Tests;
 
@@ -121,5 +122,19 @@ public sealed class BrainParserTests
 
         Assert.That(analysis.Urls, Is.Empty);
         Assert.That(analysis.Tags, Is.Empty);
+    }
+
+    [Test]
+    public void GivenQuotedAndUnquotedFilesCheckPathsAreExtractedFromText()
+    {
+        using var first = new TempFile(".png");
+        using var second = new TempFile(".txt");
+        var analysis = BrainFileParser.Analyse($"My assets @file:{first.FullName} @file:\"{second.FullName}\"");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(analysis.Text, Is.EqualTo("My assets"));
+            Assert.That(analysis.Files.Select(x => x.FullName), Is.EqualTo(new[] { first.FullName, second.FullName }));
+        });
     }
 }

@@ -41,6 +41,7 @@ Remember a thought directly or with the explicit `add` command:
 ```bash
 brain "My wife loves getting flowers"
 brain add "@Bob recommended Google Drive for Brain"
+brain 'This is my standard developer logo @file:"/Users/me/Pictures/developer-logo.png"'
 ```
 
 Search and browse your memories:
@@ -57,6 +58,31 @@ brain todos
 
 `brain tags` displays tag counts in columns up to 80 characters wide. Use `--json` for structured tag data.
 
+## Attach Files
+
+Add one or more small files to a memory with `@file:`. Brain immediately copies each file into its own storage, so the original can later be moved or deleted:
+
+```bash
+brain 'My standard developer logo @file:"/Users/me/Pictures/developer-logo.png"'
+brain 'Brand assets @file:logo.png @file:"logo dark.png"'
+```
+
+PowerShell users can wrap the complete memory in single quotes:
+
+```powershell
+brain 'My standard developer logo @file:"C:\My Files\developer-logo.png"'
+```
+
+Recall output shows attachment names and entry IDs. List or extract attachments with:
+
+```bash
+brain attachments
+brain extract <entry-id>
+brain extract <entry-id> --to <folder>
+```
+
+Attachments are limited to 10 MB each and stored once by content hash, even when several memories use the same file. When the final referencing memory is forgotten, Brain retains the attachment for 30 days before automatically pruning it after a successful Drive pull. Preview or run cleanup manually with `brain attachments prune --dry-run` and `brain attachments prune`.
+
 Recall returns every matching entry by default. Add `--count <number>` (or `-count <number>`) when you only want the highest-ranked matches. Output includes each entry's ID; use it to forget something:
 
 ```bash
@@ -65,11 +91,13 @@ brain forget 88e961720efc3bcf
 
 Forgotten entries are synchronized as tombstones, so another computer will not restore them.
 
-Export active memories to a readable JSON file for backup or use with another tool:
+Export active memory text and metadata to a readable JSON file for backup or use with another tool:
 
 ```bash
 brain export brain-backup.json
 ```
+
+The JSON export includes attachment metadata and hashes, but not the binary attachment blobs. Connected attachments remain backed up in Brain's private Google Drive application-data folder.
 
 ## Sync with Google Drive
 
@@ -79,7 +107,7 @@ Connect each computer once:
 brain drive connect
 ```
 
-Brain opens Google's consent screen and requests access only to its private application-data folder. After connection, Brain pushes changes after capture and periodically pulls changes before reads.
+Brain opens Google's consent screen and requests access only to its private application-data folder. After connection, Brain pushes memories and referenced attachments after capture and periodically pulls changes before reads.
 
 Useful sync commands:
 
@@ -119,6 +147,7 @@ Brain derives useful metadata from clear signals while leaving ambiguous notes a
 - `@Erica` identifies a person. Later mentions of Erica are recognized automatically.
 - `@todo` marks a todo.
 - `#tag` categorizes a thought. Tags are stored separately and shown in bold in console results.
+- `@file:<path>` copies a file into Brain and attaches it to the memory; quote paths containing spaces.
 - Entries containing a URL are automatically tagged `url`, so `brain recall "#url"` lists remembered links.
 - `PLAT-123`-style values are recorded as references.
 - Phrases such as `my wife` can imply personal context.
@@ -136,8 +165,13 @@ brain recall <query> [--count <number>]
 brain recent [count]         Show recent thoughts
 brain people                 Show known people
 brain tags                   Show known tags and entry counts
+brain attachments            Show stored attachments
+brain attachments prune [--dry-run]
+                             Prune attachments orphaned for 30 days
 brain todos                  Show remembered todos
 brain forget <id>            Forget an entry
+brain extract <id> [--to <folder>]
+                             Extract an entry's attachments
 brain export <file>          Export active entries as JSON
 brain path                   Show the storage path
 brain drive connect          Connect Google Drive
@@ -156,7 +190,7 @@ In PowerShell, quote text and queries containing `@`, for example `brain recall 
 
 ## Storage
 
-Run `brain path` to display the storage location for the current installation. Each thought is an immutable JSON file, and known people are derived from those entries rather than maintained in a separate index.
+Run `brain path` to display the storage location for the current installation. Each thought is an immutable JSON file. Attachments are immutable binary blobs named by SHA-256 content hash; entry JSON stores only their metadata and hash.
 
 Google Drive synchronization uses Brain's private `appDataFolder`. The refresh token is stored in Brain's per-user settings. Brain uses a bundled Desktop OAuth client with PKCE; users do not need environment variables or Google developer credentials.
 

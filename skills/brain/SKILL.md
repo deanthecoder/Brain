@@ -23,6 +23,8 @@ Run:
 brain add <verbatim text> --json
 ```
 
+When the user explicitly asks to attach a local file, include it in the remembered text as `@file:<absolute path>` or `@file:"<absolute path with spaces>"`. Do not attach files merely because they are mentioned. Brain copies files at capture time and limits each attachment to 10 MB.
+
 - Preserve the text after the trigger verbatim unless the user asks for editing.
 - Do not add inferred facts or a generated summary as a separate memory.
 - Brain returns the existing entry when the same text has already been remembered. Report the returned entry ID concisely without retrying the write.
@@ -40,6 +42,8 @@ Treat "ask my brain", "check my brain", and "what does my brain know" as authori
 6. If evidence is absent, weak, outdated, or contradictory, say so. Never fill gaps as though Brain contained the answer.
 
 Use `brain recent <count> --json`, `brain people --json`, `brain tags --json`, or `brain todos --json` when the request specifically concerns recency, people, tags, or todos.
+
+Entries can include an `attachments` array. When the user asks to use or retrieve an attachment, run `brain extract <entry-id> --to <folder> --json` and use the returned path. Do not extract attachments unnecessarily, and never overwrite an existing destination file.
 
 ## Review
 
@@ -78,5 +82,6 @@ Do not choose among ambiguous matches. Report the forgotten ID.
 - Reveal retrieved memories only as needed to answer the user's request.
 - Do not send Brain content to unrelated tools or services.
 - Do not read or edit Brain's JSON files directly.
+- Do not read Brain attachment blobs directly; use `brain extract`.
 - On command failure, report the useful error and leave data unchanged.
 - Do not retry writes or forget operations unless the command clearly did not complete.

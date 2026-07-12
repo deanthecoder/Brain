@@ -235,6 +235,30 @@ public sealed class BrainAppTests
         });
     }
 
+    [Test]
+    public void GivenAttachedFileCheckItCanBeExtractedAfterSourceIsDeleted()
+    {
+        using var home = new TempDirectory();
+        var sourcePath = Path.Combine(home.FullName, "developer logo.png");
+        File.WriteAllText(sourcePath, "logo bytes");
+        var store = new BrainStore(home);
+        var app = new BrainApp(store, _ => new TestSynchroniser { IsPullDue = false });
+
+        var added = RunJson(app, ["add", $"My developer logo @file:\"{sourcePath}\"", "--json"]);
+        File.Delete(sourcePath);
+        var output = Path.Combine(home.FullName, "output");
+        var extracted = RunJson(app, ["extract", added.GetProperty("id").GetString(), "--to", output, "--json"]);
+        var extractedPath = extracted[0].GetProperty("path").GetString();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(added.GetProperty("text").GetString(), Is.EqualTo("My developer logo"));
+            Assert.That(added.GetProperty("attachments").GetArrayLength(), Is.EqualTo(1));
+            Assert.That(extractedPath, Is.EqualTo(Path.Combine(output, "developer logo.png")));
+            Assert.That(File.ReadAllText(extractedPath), Is.EqualTo("logo bytes"));
+        });
+    }
+
     private static BrainStore StoreMatchingEntries(DirectoryInfo home, int count)
     {
         var store = new BrainStore(home);

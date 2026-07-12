@@ -10,17 +10,4 @@
 
 namespace Brain.Cli.Models;
 
-internal sealed record BrainEntry(
-    string Id,
-    DateTimeOffset CreatedAt,
-    string Text,
-    string Context,
-    string ContextReason,
-    IReadOnlyList<string> People,
-    IReadOnlyList<string> References,
-    IReadOnlyList<string> Urls,
-    IReadOnlyList<string> EmailAddresses,
-    bool IsTodo = false,
-    IReadOnlyList<string> Tags = null,
-    string OriginalText = null,
-    IReadOnlyList<BrainAttachment> Attachments = null);
+internal sealed record BrainAttachment(string Hash, string FileName, string ContentType, long Size);

@@ -8,6 +8,7 @@
 //
 // THE SOFTWARE IS PROVIDED AS IS, WITHOUT WARRANTY OF ANY KIND.
 
+using Brain.Cli;
 using Brain.Cli.Models;
 using Brain.Cli.Storage;
 using DTC.Core;
@@ -150,6 +151,109 @@ public sealed class BrainStoreTests
             Assert.That(entries[1].GetProperty("id").GetString(), Is.EqualTo("later"));
             Assert.That(File.ReadAllText(destination.FullName), Does.Contain(Environment.NewLine + "  {"));
         });
+    }
+
+    [Test]
+    public void GivenSameFileTwiceCheckAttachmentBlobIsDeduplicated()
+    {
+        using var home = new TempDirectory();
+        using var source = new TempFile(".png");
+        File.WriteAllText(source.FullName, "fake png data");
+        var store = new BrainStore(home);
+
+        var first = store.StoreAttachment(source);
+        var second = store.StoreAttachment(source);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(first, Is.EqualTo(second));
+            Assert.That(first.ContentType, Is.EqualTo("image/png"));
+            Assert.That(Directory.GetFiles(Path.Combine(home.FullName, "attachments")), Has.Length.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public void GivenAttachedEntryCheckBlobIsIncludedInSyncFiles()
+    {
+        using var home = new TempDirectory();
+        using var source = new TempFile(".txt");
+        File.WriteAllText(source.FullName, "attachment content");
+        var store = new BrainStore(home);
+        var attachment = store.StoreAttachment(source);
+        store.Append(Entry("attached", []) with { Attachments = [attachment] });
+
+        Assert.That(store.GetSyncFiles().Select(x => x.Name), Is.EquivalentTo(new[]
+        {
+            "entry-attached.json",
+            $"attachment-{attachment.Hash}.blob"
+        }));
+    }
+
+    [Test]
+    public void GivenAttachmentOrphanedForThirtyDaysCheckItIsPruned()
+    {
+        using var home = new TempDirectory();
+        using var source = new TempFile(".txt");
+        File.WriteAllText(source.FullName, "attachment content");
+        var store = new BrainStore(home);
+        var attachment = store.StoreAttachment(source);
+        store.Append(Entry("attached", []) with { Attachments = [attachment] });
+        store.Forget("attached");
+        var pruneAt = store.LoadAttachmentStatuses(DateTimeOffset.UtcNow).Single().PruneAt.Value;
+
+        var pruned = store.PruneAttachments(pruneAt.AddSeconds(1), false);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(pruned.Select(x => x.Hash), Is.EqualTo(new[] { attachment.Hash }));
+            Assert.That(store.GetAttachmentFile(attachment.Hash).Exists, Is.False);
+        });
+    }
+
+    [Test]
+    public void GivenSharedAttachmentCheckActiveReferencePreventsPruning()
+    {
+        using var home = new TempDirectory();
+        using var source = new TempFile(".txt");
+        File.WriteAllText(source.FullName, "shared attachment");
+        var store = new BrainStore(home);
+        var attachment = store.StoreAttachment(source);
+        store.Append(Entry("forgotten", []) with { Attachments = [attachment] });
+        store.Append(Entry("active", []) with { Attachments = [attachment] });
+        store.Forget("forgotten");
+
+        var pruned = store.PruneAttachments(DateTimeOffset.UtcNow.AddYears(1), false);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(pruned, Is.Empty);
+            Assert.That(store.GetAttachmentFile(attachment.Hash).Exists, Is.True);
+        });
+    }
+
+    [Test]
+    public void GivenAttachmentOverTenMegabytesCheckItIsRejected()
+    {
+        using var home = new TempDirectory();
+        using var source = new TempFile(".bin");
+        using (var stream = File.Create(source.FullName))
+            stream.SetLength(10 * 1024 * 1024 + 1);
+
+        var exception = Assert.Throws<BrainUsageException>(() => new BrainStore(home).StoreAttachment(source));
+
+        Assert.That(exception.Message, Does.Contain("10 MB"));
+    }
+
+    [Test]
+    public void GivenCorruptImportedAttachmentCheckIntegrityFailureIsReported()
+    {
+        using var home = new TempDirectory();
+        var store = new BrainStore(home);
+        using var stream = new MemoryStream("corrupt"u8.ToArray());
+
+        var exception = Assert.Throws<InvalidDataException>(() => store.Import($"attachment-{new string('0', 64)}.blob", stream));
+
+        Assert.That(exception.Message, Does.Contain("integrity check"));
     }
 
     private static BrainEntry Entry(string id, IReadOnlyList<string> tags)

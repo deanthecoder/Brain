@@ -72,8 +72,10 @@ internal sealed class BrainApp
                 "recent" => Recent(args[1..], json),
                 "people" => People(json),
                 "tags" => Tags(json),
+                "attachments" => Attachments(args[1..], json),
                 "todo" or "todos" => Todos(json),
                 "forget" => Forget(args[1..], json),
+                "extract" => Extract(args[1..], json),
                 "export" => Export(args[1..], json),
                 "path" => Path(json),
                 "drive" => Drive(args[1..], json),
@@ -114,8 +116,13 @@ internal sealed class BrainApp
             return 0;
         }
 
+        var fileAnalysis = BrainFileParser.Analyse(text);
+        if (string.IsNullOrWhiteSpace(fileAnalysis.Text))
+            throw new BrainUsageException("An attachment needs some text to describe it.");
+
+        var attachments = fileAnalysis.Files.Select(m_store.StoreAttachment).ToArray();
         var people = m_store.LoadPeople();
-        var analysis = BrainParser.Analyse(text, people);
+        var analysis = BrainParser.Analyse(fileAnalysis.Text, people);
 
         var entry = new BrainEntry(
             BrainIds.NewId(),
@@ -129,7 +136,8 @@ internal sealed class BrainApp
             analysis.EmailAddresses.Order(StringComparer.OrdinalIgnoreCase).ToArray(),
             analysis.IsTodo,
             analysis.Tags.Order(StringComparer.OrdinalIgnoreCase).ToArray(),
-            text);
+            text,
+            attachments);
 
         m_store.Append(entry);
         m_hasChanges = true;
@@ -166,6 +174,9 @@ internal sealed class BrainApp
 
         if (entry.IsTodo)
             Console.WriteLine("Todo: yes");
+
+        foreach (var attachment in entry.Attachments)
+            Console.WriteLine($"Attachment: {attachment.FileName} ({FormatSize(attachment.Size)})");
 
         return 0;
     }
@@ -338,6 +349,101 @@ internal sealed class BrainApp
         return 0;
     }
 
+    private int Attachments(string[] args, bool json)
+    {
+        if (args.Length > 0)
+            return PruneAttachments(args, json);
+
+        var attachments = m_store.LoadAttachmentStatuses(DateTimeOffset.UtcNow);
+        if (json)
+        {
+            WriteJson(attachments);
+            return 0;
+        }
+
+        if (attachments.Count == 0)
+        {
+            Console.WriteLine("No attachments.");
+            return 0;
+        }
+
+        foreach (var attachment in attachments)
+        {
+            var status = attachment.ReferenceCount > 0
+                ? $"{attachment.ReferenceCount} {(attachment.ReferenceCount == 1 ? "reference" : "references")}"
+                : $"orphaned; prunes {attachment.PruneAt:yyyy-MM-dd}";
+            Console.WriteLine($"{attachment.FileName}  {FormatSize(attachment.Size)}  {status}  {attachment.Hash[..12]}");
+        }
+
+        return 0;
+    }
+
+    private int PruneAttachments(string[] args, bool json)
+    {
+        var dryRun = RemoveFlag(args, out args, "--dry-run", "-dry-run");
+        if (args.Length != 1 || !string.Equals(args[0], "prune", StringComparison.OrdinalIgnoreCase))
+            throw new BrainUsageException("Attachments expects prune with an optional --dry-run switch.");
+
+        var drive = new GoogleDriveSync(m_store);
+        var attachments = drive.PruneAttachments(dryRun);
+
+        if (json)
+            WriteJson(new { dryRun, count = attachments.Count, attachments });
+        else if (attachments.Count == 0)
+            Console.WriteLine("No attachments are ready to prune.");
+        else
+            Console.WriteLine(dryRun
+                ? $"Would prune {attachments.Count} {(attachments.Count == 1 ? "attachment" : "attachments")}."
+                : $"Pruned {attachments.Count} {(attachments.Count == 1 ? "attachment" : "attachments")}.");
+
+        return 0;
+    }
+
+    private int Extract(string[] args, bool json)
+    {
+        var destinationText = RemoveOption(args, out args, "--to", "-to");
+        if (args.Length != 1 || string.IsNullOrWhiteSpace(args[0]))
+            throw new BrainUsageException("Extract expects an entry ID and optional --to folder.");
+
+        var entry = m_store.FindEntry(args[0].Trim());
+        if (entry == null)
+            throw new BrainUsageException($"Entry not found: {args[0].Trim()}");
+
+        var destination = new DirectoryInfo(System.IO.Path.GetFullPath(destinationText ?? Directory.GetCurrentDirectory()));
+        destination.Create();
+        var files = entry.Attachments.Select(attachment => new
+        {
+            Attachment = attachment,
+            Source = m_store.GetAttachmentFile(attachment.Hash),
+            Destination = new FileInfo(System.IO.Path.Combine(destination.FullName, System.IO.Path.GetFileName(attachment.FileName)))
+        }).ToArray();
+
+        if (files.GroupBy(x => x.Destination.FullName, StringComparer.OrdinalIgnoreCase).Any(x => x.Count() > 1))
+            throw new BrainUsageException("Two attachments have the same destination file name.");
+
+        foreach (var file in files)
+        {
+            file.Source.Refresh();
+            if (!file.Source.Exists)
+                throw new BrainUsageException($"Attachment is not available locally: {file.Attachment.FileName}");
+            if (file.Destination.Exists)
+                throw new BrainUsageException($"Destination file already exists: {file.Destination.FullName}");
+        }
+
+        foreach (var file in files)
+            file.Source.CopyTo(file.Destination.FullName);
+
+        if (json)
+            WriteJson(files.Select(x => new { path = x.Destination.FullName, attachment = x.Attachment }).ToArray());
+        else if (files.Length == 0)
+            Console.WriteLine("That entry has no attachments.");
+        else
+            foreach (var file in files)
+                Console.WriteLine($"Extracted {file.Attachment.FileName} to {file.Destination.FullName}.");
+
+        return 0;
+    }
+
     private int Path(bool json)
     {
         if (json)
@@ -501,6 +607,9 @@ internal sealed class BrainApp
         if (entry.EmailAddresses.Count > 0)
             extras.Add($"emails: {string.Join(", ", entry.EmailAddresses)}");
 
+        if (entry.Attachments.Count > 0)
+            extras.Add($"attachments: {string.Join(", ", entry.Attachments.Select(x => $"{x.FileName} ({FormatSize(x.Size)})"))}");
+
         if (extras.Count > 0)
         {
             Markdown.Write($"_{string.Join(" | ", extras)}_");
@@ -509,6 +618,10 @@ internal sealed class BrainApp
     }
 
     private static string FormatTags(IEnumerable<string> tags) => string.Join(' ', tags.Select(x => $"**#{x}**"));
+
+    private static string FormatSize(long size) => size < 1024 * 1024
+        ? $"{Math.Max(1, size / 1024)} KB"
+        : $"{size / (1024d * 1024d):0.#} MB";
 
     internal static IReadOnlyList<string> FormatTagTable(IReadOnlyList<TagSummary> tags, int maximumWidth = 80, int spacing = 5)
     {
@@ -557,8 +670,11 @@ internal sealed class BrainApp
             | `brain recent [count]` | Show recent thoughts |
             | `brain people` | Show known people |
             | `brain tags` | Show known tags and entry counts |
+            | `brain attachments` | Show stored attachments |
+            | `brain attachments prune [--dry-run]` | Prune attachments orphaned for 30 days |
             | `brain todos` | Show remembered todos |
             | `brain forget <id>` | Forget an entry |
+            | `brain extract <id> [--to <folder>]` | Extract an entry's attachments |
             | `brain export <file>` | Export active entries as JSON |
             | `brain path` | Show the storage path |
             | `brain drive connect` | Connect a Google Drive account |
@@ -575,6 +691,7 @@ internal sealed class BrainApp
 
             - `@Erica` tags Erica as a person and remembers the name.
             - `@todo` marks a thought as a todo.
+            - `@file:<path>` copies and attaches a file; quote paths containing spaces.
             - `#tag` categorizes a thought; hashtags are removed from its displayed text.
             - URLs are automatically tagged `url`.
             - `PLAT-123` tags a Jira-style reference and implies work context.

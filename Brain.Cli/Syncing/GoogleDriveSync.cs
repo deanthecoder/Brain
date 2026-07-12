@@ -8,6 +8,7 @@
 //
 // THE SOFTWARE IS PROVIDED AS IS, WITHOUT WARRANTY OF ANY KIND.
 
+using Brain.Cli.Models;
 using Brain.Cli.Storage;
 using DTC.Core.Extensions;
 using Google.Apis.Auth.OAuth2;
@@ -96,6 +97,8 @@ internal sealed class GoogleDriveSync : IBrainSynchroniser
                 downloaded++;
             }
 
+            PruneAttachments(service, remoteFiles.Values, false);
+
             m_settings.LastPulledAtUtc = DateTime.UtcNow;
             ClearError();
             m_settings.Save();
@@ -125,12 +128,15 @@ internal sealed class GoogleDriveSync : IBrainSynchroniser
                     continue;
 
                 using var stream = localFile.OpenRead();
+                var contentType = localFile.Name.StartsWith("attachment-", StringComparison.Ordinal)
+                    ? "application/octet-stream"
+                    : "application/json";
                 var request = service.Files.Create(new DriveFile
                 {
                     Name = localFile.Name,
                     Parents = new List<string> { "appDataFolder" },
-                    MimeType = "application/json"
-                }, stream, "application/json");
+                    MimeType = contentType
+                }, stream, contentType);
                 request.Fields = "id";
                 request.Upload();
                 uploaded++;
@@ -152,6 +158,15 @@ internal sealed class GoogleDriveSync : IBrainSynchroniser
     public void Disconnect()
     {
         m_settings.Clear();
+    }
+
+    public IReadOnlyList<BrainAttachmentStatus> PruneAttachments(bool dryRun)
+    {
+        if (!IsConnected)
+            return m_store.PruneAttachments(DateTimeOffset.UtcNow, dryRun);
+
+        using var service = CreateService();
+        return PruneAttachments(service, ListEntries(service), dryRun);
     }
 
     private DriveService CreateService(bool requireConnection = true)
@@ -191,7 +206,7 @@ internal sealed class GoogleDriveSync : IBrainSynchroniser
         {
             var request = service.Files.List();
             request.Spaces = "appDataFolder";
-            request.Q = "name contains 'entry-' or name contains 'forgotten-'";
+            request.Q = "name contains 'entry-' or name contains 'forgotten-' or name contains 'attachment-'";
             request.Fields = "nextPageToken, files(id, name)";
             request.PageToken = pageToken;
 
@@ -207,6 +222,24 @@ internal sealed class GoogleDriveSync : IBrainSynchroniser
     {
         if (!IsConnected)
             throw new BrainUsageException("Google Drive is not connected. Run 'brain drive connect' first.");
+    }
+
+    private IReadOnlyList<BrainAttachmentStatus> PruneAttachments(
+        DriveService service,
+        IEnumerable<DriveFile> remoteFiles,
+        bool dryRun)
+    {
+        var attachments = m_store.PruneAttachments(DateTimeOffset.UtcNow, dryRun);
+        if (dryRun || attachments.Count == 0)
+            return attachments;
+
+        var names = attachments
+            .Select(x => $"attachment-{x.Hash}.blob")
+            .ToHashSet(StringComparer.Ordinal);
+        foreach (var remoteFile in remoteFiles.Where(x => names.Contains(x.Name)))
+            service.Files.Delete(remoteFile.Id).Execute();
+
+        return attachments;
     }
 
     private void RecordError(string operation, Exception exception)

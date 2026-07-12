@@ -68,7 +68,9 @@ internal static partial class BrainParser
 
             name = name.Trim();
 
-            if (name.Length > 0 && !string.Equals(name, "todo", StringComparison.OrdinalIgnoreCase))
+            if (name.Length > 0 &&
+                !string.Equals(name, "todo", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(name, "file", StringComparison.OrdinalIgnoreCase))
                 people.Add(name);
         }
 
