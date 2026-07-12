@@ -2,27 +2,26 @@
 
 # Brain
 
-Remember something now. Find it when you need it.
+**Remember from any terminal. Sync across computers. Recall with the CLI or Codex.**
 
-Brain is a small cross-platform command-line memory store for facts, decisions, people, links, and todos. Capturing a thought takes one command, the original wording stays intact, and optional Google Drive sync keeps the same memories available across your computers.
+![Brain overview](img/BrainOverview.png)
+
+Brain is a fast, cross-platform memory store for facts, decisions, people, links, files, and todos. Capture a thought in one command, find it later from any connected computer, or simply ask Codex what your Brain knows.
 
 ```bash
 brain "@Erica says 16-bit support is not needed for PLAT-123"
-brain "@todo Renew the domain next month"
-brain "Renew the domain next month #todo #admin"
-
 brain recall "16 bit"
-brain recall "@Erica"
-brain todos
 ```
+
+With the Codex skill installed, use natural requests such as **"Remember this in my brain"** and **"Ask my brain about 16-bit support."**
 
 ## Why Brain?
 
-- **Fast capture:** write a thought without choosing a document or organizing it first.
-- **Simple recall:** search the original text, people, references, links, and todos.
-- **Private storage:** memories live as readable JSON files on your computer.
-- **Cross-machine sync:** connect Google Drive once on each computer; no API setup or credentials file is required.
-- **Codex integration:** say "ask my brain" or "remember in my brain" and let Codex interpret the request.
+- **Effortless command-line capture:** remember something without choosing a document, opening an app, or organizing it first.
+- **Private cross-machine sync:** connect Google Drive once on each computer; Brain uses its hidden application-data folder and needs no user API setup.
+- **Flexible recall:** search from the terminal by text, person, tag, reference, URL, or entry ID.
+- **AI integration:** Codex can add, recall, review, tag, and tidy memories when you refer to "my brain."
+- **Portable local data:** memories remain readable JSON files, while attachments are stored as deduplicated binary blobs.
 
 ## Install
 
