@@ -5,7 +5,7 @@ description: Use the Brain command-line memory store when the user refers to "my
 
 # Brain
 
-Use the installed `brain` CLI as the source of truth. Use `--json` for machine-readable results and preserve the user's original wording when remembering information.
+Use the installed `brain` CLI as the source of truth. Use `--json` for machine-readable results. Keep remembered information faithful to the user's meaning while allowing light editing and useful tags as described below.
 
 ## Check availability
 
@@ -20,13 +20,14 @@ Treat phrases such as "add to my brain" and "remember in my brain" as explicit a
 Run:
 
 ```text
-brain add <verbatim text> --json
+brain add <prepared text> --json
 ```
 
 When the user explicitly asks to attach a local file, include it in the remembered text as `@file:<absolute path>` or `@file:"<absolute path with spaces>"`. Do not attach files merely because they are mentioned. Brain copies files at capture time and limits each attachment to 10 MB.
 
-- Preserve the text after the trigger verbatim unless the user asks for editing.
-- Do not add inferred facts or a generated summary as a separate memory.
+- You may lightly reword the supplied text so the memory is concise, clear, and understandable on its own. Do not change its meaning, add inferred facts, or store a separate generated summary.
+- Preserve exact names, numbers, dates, quotations, references, URLs, email addresses, `@Name`, `@todo`, and `@file:` markers. Preserve all wording when the user requests verbatim or exact storage.
+- When tags would materially aid retrieval, run `brain tags --json` and append one to three relevant hashtags. Prefer established tags and their existing spelling. Introduce a new tag only when it is likely to be reused; do not tag every noun.
 - Brain returns the existing entry when the same text has already been remembered. Report the returned entry ID concisely without retrying the write.
 - If the text to store is ambiguous, ask before writing.
 
