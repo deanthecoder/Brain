@@ -83,7 +83,7 @@ brain extract <entry-id> --to <folder>
 
 Attachments are limited to 10 MB each and stored once by content hash, even when several memories use the same file. When the final referencing memory is forgotten, Brain retains the attachment for 30 days before automatically pruning it after a successful Drive pull. Preview or run cleanup manually with `brain attachments prune --dry-run` and `brain attachments prune`.
 
-Recall returns every matching entry by default. Add `--count <number>` (or `-count <number>`) when you only want the highest-ranked matches. Output includes each entry's ID; use it to forget something:
+Recall returns every matching entry by default. An exact entry ID recalls that entry directly. Add `--count <number>` (or `-count <number>`) when you only want the highest-ranked matches. Output includes each entry's ID; use it to forget something:
 
 ```bash
 brain forget 88e961720efc3bcf

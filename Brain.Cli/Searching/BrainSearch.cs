@@ -18,6 +18,11 @@ internal static class BrainSearch
 {
     public static IEnumerable<BrainMatch> Search(IEnumerable<BrainEntry> entries, string query)
     {
+        var entryList = entries as IReadOnlyList<BrainEntry> ?? entries.ToArray();
+        var idMatch = entryList.FirstOrDefault(x => string.Equals(x.Id, query, StringComparison.OrdinalIgnoreCase));
+        if (idMatch != null)
+            return [new BrainMatch(idMatch, 1000)];
+
         var personFilter = TryGetPersonFilter(query);
         var referenceFilter = TryGetReferenceFilter(query);
         var urlFilter = TryGetUrlFilter(query);
@@ -25,7 +30,7 @@ internal static class BrainSearch
         var tagFilter = TryGetTagFilter(query);
         var tokens = Tokenize(query).ToArray();
 
-        return entries
+        return entryList
             .Select(entry => new BrainMatch(entry, Score(entry, query, tokens, personFilter, referenceFilter, urlFilter, emailAddressFilter, tagFilter)))
             .Where(match => match.Score > 0)
             .OrderByDescending(match => match.Score)

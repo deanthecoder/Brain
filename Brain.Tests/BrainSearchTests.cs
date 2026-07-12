@@ -63,6 +63,28 @@ public sealed class BrainSearchTests
         Assert.That(matches[0].Score, Is.EqualTo(100));
     }
 
+    [Test]
+    public void GivenExactEntryIdCheckOnlyThatEntryIsReturned()
+    {
+        var exact = Entry("abc123", "The matching entry");
+        var textMatch = Entry("other", "This mentions abc123 in its text");
+
+        var matches = BrainSearch.Search([textMatch, exact], "ABC123").ToArray();
+
+        Assert.That(matches.Select(x => x.Entry.Id), Is.EqualTo(new[] { "abc123" }));
+        Assert.That(matches[0].Score, Is.EqualTo(1000));
+    }
+
+    [Test]
+    public void GivenPartialEntryIdCheckItIsNotTreatedAsAnIdMatch()
+    {
+        var entry = Entry("abc123", "A remembered thought");
+
+        var matches = BrainSearch.Search([entry], "abc12").ToArray();
+
+        Assert.That(matches, Is.Empty);
+    }
+
     private static BrainEntry Entry(
         string id,
         string text = "A remembered thought",
