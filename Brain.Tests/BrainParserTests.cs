@@ -47,14 +47,14 @@ public sealed class BrainParserTests
     }
 
     [Test]
-    public void GivenTodoTagCheckTodoIsRecognisedWithoutAddingAPerson()
+    public void GivenTodoPersonCheckTodoIsNotRecognisedAsATodo()
     {
         var analysis = BrainParser.Analyse("@todo Buy flowers for Erica", new HashSet<string>());
 
         Assert.Multiple(() =>
         {
-            Assert.That(analysis.IsTodo, Is.True);
-            Assert.That(analysis.People, Is.Empty);
+            Assert.That(analysis.IsTodo, Is.False);
+            Assert.That(analysis.People, Is.EquivalentTo(new[] { "todo" }));
         });
     }
 

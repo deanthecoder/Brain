@@ -690,7 +690,7 @@ internal sealed class BrainApp
             ## Conventions
 
             - `@Erica` tags Erica as a person and remembers the name.
-            - `@todo` marks a thought as a todo.
+            - `#todo` marks a thought as a todo.
             - `@file:<path>` copies and attaches a file; quote paths containing spaces.
             - `#tag` categorizes a thought; hashtags are removed from its displayed text.
             - URLs are automatically tagged `url`.

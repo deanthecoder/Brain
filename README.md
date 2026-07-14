@@ -144,7 +144,7 @@ Brain derives useful metadata from clear signals while leaving ambiguous notes a
 
 - Remembering the same text again, ignoring letter case, returns the existing entry instead of creating a duplicate.
 - `@Erica` identifies a person. Later mentions of Erica are recognized automatically.
-- `@todo` marks a todo.
+- `#todo` marks a todo.
 - `#tag` categorizes a thought. Tags are stored separately and shown in bold in console results.
 - `@file:<path>` copies a file into Brain and attaches it to the memory; quote paths containing spaces.
 - Entries containing a URL are automatically tagged `url`, so `brain recall "#url"` lists remembered links.

@@ -26,7 +26,7 @@ brain add <prepared text> --json
 When the user explicitly asks to attach a local file, include it in the remembered text as `@file:<absolute path>` or `@file:"<absolute path with spaces>"`. Do not attach files merely because they are mentioned. Brain copies files at capture time and limits each attachment to 10 MB.
 
 - You may lightly reword the supplied text so the memory is concise, clear, and understandable on its own. Do not change its meaning, add inferred facts, or store a separate generated summary.
-- Preserve exact names, numbers, dates, quotations, references, URLs, email addresses, `@Name`, `@todo`, and `@file:` markers. Preserve all wording when the user requests verbatim or exact storage.
+- Preserve exact names, numbers, dates, quotations, references, URLs, email addresses, `@Name`, `#todo`, and `@file:` markers. Preserve all wording when the user requests verbatim or exact storage.
 - When tags would materially aid retrieval, run `brain tags --json` and append one to three relevant hashtags. Prefer established tags and their existing spelling. Introduce a new tag only when it is likely to be reused; do not tag every noun.
 - Brain returns the existing entry when the same text has already been remembered. Report the returned entry ID concisely without retrying the write.
 - If the text to store is ambiguous, ask before writing.

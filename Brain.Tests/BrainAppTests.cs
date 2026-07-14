@@ -131,7 +131,7 @@ public sealed class BrainAppTests
         var store = new BrainStore(home);
         var app = new BrainApp(store);
 
-        var addResult = app.Run(["@todo", "Buy", "flowers"]);
+        var addResult = app.Run(["Buy", "flowers", "#todo"]);
         var todos = store.LoadEntries().Where(x => x.IsTodo).ToArray();
 
         Assert.Multiple(() =>

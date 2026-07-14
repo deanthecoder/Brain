@@ -138,8 +138,7 @@ internal sealed class BrainStore
     {
         return LoadEntries()
             .SelectMany(x => x.People)
-            .Where(x => !string.Equals(x, "todo", StringComparison.OrdinalIgnoreCase) &&
-                        !string.Equals(x, "file", StringComparison.OrdinalIgnoreCase))
+            .Where(x => !string.Equals(x, "file", StringComparison.OrdinalIgnoreCase))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 
