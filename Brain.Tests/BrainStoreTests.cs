@@ -132,6 +132,38 @@ public sealed class BrainStoreTests
     }
 
     [Test]
+    public void GivenEntriesAndAttachmentCheckStatsDescribeActiveMemoryAndDiskUsage()
+    {
+        using var home = new TempDirectory();
+        using var source = new TempFile(".txt");
+        File.WriteAllText(source.FullName, "attachment content");
+        var store = new BrainStore(home);
+        var attachment = store.StoreAttachment(source);
+        store.Append(Entry("active", ["todo", "work"]) with
+        {
+            IsTodo = true,
+            People = ["Erica"],
+            Attachments = [attachment]
+        });
+        store.Append(Entry("forgotten", ["old"]));
+        store.Forget("forgotten");
+
+        var stats = store.LoadStats();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(stats.RememberedCount, Is.EqualTo(1));
+            Assert.That(stats.TodoCount, Is.EqualTo(1));
+            Assert.That(stats.PeopleCount, Is.EqualTo(1));
+            Assert.That(stats.TagCount, Is.EqualTo(2));
+            Assert.That(stats.Attachments.FileCount, Is.EqualTo(1));
+            Assert.That(stats.Attachments.Bytes, Is.EqualTo(new FileInfo(source.FullName).Length));
+            Assert.That(stats.Total.FileCount, Is.EqualTo(4));
+            Assert.That(stats.Total.Bytes, Is.GreaterThan(stats.Attachments.Bytes));
+        });
+    }
+
+    [Test]
     public void GivenEntriesCheckExportWritesReadableJsonInDateOrder()
     {
         using var home = new TempDirectory();

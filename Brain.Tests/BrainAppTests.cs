@@ -279,6 +279,37 @@ public sealed class BrainAppTests
     }
 
     [Test]
+    public void GivenStatsJsonCheckExactCountsAndBytesAreReturned()
+    {
+        using var home = new TempDirectory();
+        var store = new BrainStore(home);
+        store.Append(new Brain.Cli.Models.BrainEntry(
+            "entry-1",
+            DateTimeOffset.UtcNow,
+            "A todo",
+            null,
+            null,
+            ["Erica"],
+            Array.Empty<string>(),
+            Array.Empty<string>(),
+            Array.Empty<string>(),
+            IsTodo: true,
+            Tags: ["todo"]));
+
+        var stats = RunJson(new BrainApp(store, _ => new TestSynchroniser { IsPullDue = false }), ["stats", "--json"]);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(stats.GetProperty("rememberedCount").GetInt32(), Is.EqualTo(1));
+            Assert.That(stats.GetProperty("todoCount").GetInt32(), Is.EqualTo(1));
+            Assert.That(stats.GetProperty("peopleCount").GetInt32(), Is.EqualTo(1));
+            Assert.That(stats.GetProperty("tagCount").GetInt32(), Is.EqualTo(1));
+            Assert.That(stats.GetProperty("attachments").GetProperty("fileCount").GetInt32(), Is.Zero);
+            Assert.That(stats.GetProperty("total").GetProperty("bytes").GetInt64(), Is.GreaterThan(0));
+        });
+    }
+
+    [Test]
     public void GivenAttachedFileCheckItCanBeExtractedAfterSourceIsDeleted()
     {
         using var home = new TempDirectory();

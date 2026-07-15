@@ -150,6 +150,23 @@ internal sealed class BrainStore
             .ToDictionary(x => x.Key, x => x.Count(), StringComparer.OrdinalIgnoreCase);
     }
 
+    public BrainStats LoadStats()
+    {
+        var entries = LoadEntries();
+        var attachmentFiles = AttachmentsDirectory
+            .EnumerateFiles("attachment-*.blob", SearchOption.TopDirectoryOnly)
+            .ToArray();
+        var allFiles = Home.EnumerateFiles("*", SearchOption.AllDirectories).ToArray();
+
+        return new BrainStats(
+            entries.Count,
+            entries.Count(x => x.IsTodo),
+            entries.SelectMany(x => x.People).Distinct(StringComparer.OrdinalIgnoreCase).Count(),
+            entries.SelectMany(x => x.Tags).Distinct(StringComparer.OrdinalIgnoreCase).Count(),
+            new BrainFileStats(attachmentFiles.Length, attachmentFiles.Sum(x => x.Length)),
+            new BrainFileStats(allFiles.Length, allFiles.Sum(x => x.Length)));
+    }
+
     public int Export(FileInfo destination)
     {
         var entries = LoadEntries()

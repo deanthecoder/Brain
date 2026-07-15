@@ -74,6 +74,7 @@ internal sealed class BrainApp
                 "tags" => Tags(json),
                 "attachments" => Attachments(args[1..], json),
                 "todo" or "todos" => Todos(json),
+                "stats" => Stats(json),
                 "forget" => Forget(args[1..], json),
                 "extract" => Extract(args[1..], json),
                 "export" => Export(args[1..], json),
@@ -330,6 +331,24 @@ internal sealed class BrainApp
         foreach (var line in FormatTagTable(tags))
             Console.WriteLine(line);
 
+        return 0;
+    }
+
+    private int Stats(bool json)
+    {
+        var stats = m_store.LoadStats();
+        if (json)
+        {
+            WriteJson(stats);
+            return 0;
+        }
+
+        Console.WriteLine($"Remembered: {stats.RememberedCount}");
+        Console.WriteLine($"Todos: {stats.TodoCount}");
+        Console.WriteLine($"People: {stats.PeopleCount}");
+        Console.WriteLine($"Tags: {stats.TagCount}");
+        Console.WriteLine($"Attachments: {FormatFileStats(stats.Attachments)}");
+        Console.WriteLine($"Total storage: {FormatFileStats(stats.Total)}");
         return 0;
     }
 
@@ -627,9 +646,16 @@ internal sealed class BrainApp
 
     private static string FormatTags(IEnumerable<string> tags) => string.Join(' ', tags.Select(x => $"**#{x}**"));
 
-    private static string FormatSize(long size) => size < 1024 * 1024
-        ? $"{Math.Max(1, size / 1024)} KB"
-        : $"{size / (1024d * 1024d):0.#} MB";
+    private static string FormatSize(long size) => size switch
+    {
+        < 1024 => $"{size} {(size == 1 ? "byte" : "bytes")}",
+        < 1024 * 1024 => $"{size / 1024d:0.#} KB",
+        < 1024L * 1024 * 1024 => $"{size / (1024d * 1024d):0.#} MB",
+        _ => $"{size / (1024d * 1024d * 1024d):0.#} GB"
+    };
+
+    private static string FormatFileStats(BrainFileStats stats) =>
+        $"{stats.FileCount} {(stats.FileCount == 1 ? "file" : "files")}, {FormatSize(stats.Bytes)}";
 
     internal static IReadOnlyList<string> FormatTagTable(IReadOnlyList<TagSummary> tags, int maximumWidth = 80, int spacing = 5)
     {
@@ -681,6 +707,7 @@ internal sealed class BrainApp
             | `brain attachments` | Show stored attachments |
             | `brain attachments prune [--dry-run]` | Prune attachments orphaned for 30 days |
             | `brain todos` | Show remembered todos |
+            | `brain stats` | Show memory and storage statistics |
             | `brain forget <id>` | Forget an entry |
             | `brain extract <id> [--to <folder>]` | Extract an entry's attachments |
             | `brain export <file>` | Export active entries as JSON |

@@ -53,9 +53,11 @@ brain recent 20
 brain people
 brain tags
 brain todos
+brain stats
 ```
 
 `brain tags` displays tag counts in columns up to 80 characters wide. Use `--json` for structured tag data.
+`brain stats` reports active memories, todos, people, tags, attachment storage, and total on-disk storage. Its JSON output includes exact byte counts.
 
 ## Attach Files
 
@@ -168,6 +170,7 @@ brain attachments            Show stored attachments
 brain attachments prune [--dry-run]
                              Prune attachments orphaned for 30 days
 brain todos                  Show remembered todos
+brain stats                  Show memory and storage statistics
 brain forget <id>            Forget an entry
 brain extract <id> [--to <folder>]
                              Extract an entry's attachments
