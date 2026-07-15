@@ -210,6 +210,19 @@ public sealed class BrainAppTests
     }
 
     [Test]
+    public void GivenInterspersedTagsCheckRecallPreservesTheirCapturedOrder()
+    {
+        using var home = new TempDirectory();
+        var app = new BrainApp(new BrainStore(home), _ => new TestSynchroniser { IsPullDue = false });
+
+        app.Run(["#todo", "Ensure", "#Brain", "does", "foo"]);
+
+        var output = RunText(app, ["recall", "Ensure"]);
+
+        Assert.That(output, Does.Contain("#todo Ensure #Brain does foo"));
+    }
+
+    [Test]
     public void GivenRecallWithoutCountCheckAllMatchesAreReturned()
     {
         using var home = new TempDirectory();
@@ -310,6 +323,23 @@ public sealed class BrainAppTests
 
         using var document = JsonDocument.Parse(output.ToString());
         return document.RootElement.Clone();
+    }
+
+    private static string RunText(BrainApp app, string[] args)
+    {
+        var originalOut = Console.Out;
+        using var output = new StringWriter();
+        try
+        {
+            Console.SetOut(output);
+            Assert.That(app.Run(args), Is.Zero);
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+        }
+
+        return output.ToString();
     }
 
     private sealed class TestSynchroniser : IBrainSynchroniser

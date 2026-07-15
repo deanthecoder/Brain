@@ -587,11 +587,18 @@ internal sealed class BrainApp
 
         Markdown.Write($"**{entry.CreatedAt:yyyy-MM-dd HH:mm}{context}{scoreText}  id {entry.Id}**");
         Console.WriteLine();
-        Console.Write(entry.Text);
-        if (entry.Tags.Count > 0)
+        if (!string.IsNullOrWhiteSpace(entry.OriginalText))
         {
-            Console.Write(' ');
-            Markdown.Write(FormatTags(entry.Tags));
+            Console.Write(entry.OriginalText);
+        }
+        else
+        {
+            Console.Write(entry.Text);
+            if (entry.Tags.Count > 0)
+            {
+                Console.Write(' ');
+                Markdown.Write(FormatTags(entry.Tags));
+            }
         }
         Console.WriteLine();
 
