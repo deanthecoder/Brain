@@ -79,7 +79,7 @@ internal sealed class BrainApp
                 "export" => Export(args[1..], json),
                 "path" => Path(json),
                 "drive" => Drive(args[1..], json),
-                _ when args.Length == 1 => throw new BrainUsageException($"Unrecognised command: {args[0]}. Use 'brain add <text>' to remember a single word."),
+                _ when args.Length == 1 && IsSingleWord(args[0]) => throw new BrainUsageException($"Unrecognised command: {args[0]}. Use 'brain add <text>' to remember a single word."),
                 _ => Add(args, json)
             };
 
@@ -721,6 +721,8 @@ internal sealed class BrainApp
     }
 
     private static string JoinWords(string[] words) => string.Join(' ', words).Trim();
+
+    private static bool IsSingleWord(string text) => !text.Any(char.IsWhiteSpace);
 
     internal sealed record TagSummary(string Tag, int Count);
 

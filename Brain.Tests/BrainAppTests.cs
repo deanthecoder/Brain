@@ -65,6 +65,21 @@ public sealed class BrainAppTests
     }
 
     [Test]
+    public void GivenQuotedMultiWordThoughtCheckItIsRemembered()
+    {
+        using var home = new TempDirectory();
+        var store = new BrainStore(home);
+
+        var result = new BrainApp(store).Run(["this is a test"]);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result, Is.Zero);
+            Assert.That(store.LoadEntries().Single().Text, Is.EqualTo("this is a test"));
+        });
+    }
+
+    [Test]
     public void GivenDueConnectedDriveCheckCapturePullsThenPushes()
     {
         using var home = new TempDirectory();
