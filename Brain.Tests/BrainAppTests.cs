@@ -50,6 +50,21 @@ public sealed class BrainAppTests
     }
 
     [Test]
+    public void GivenUnrecognisedSingleWordCheckNothingIsRemembered()
+    {
+        using var home = new TempDirectory();
+        var store = new BrainStore(home);
+
+        var result = new BrainApp(store).Run(["peopel"]);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result, Is.EqualTo(2));
+            Assert.That(store.LoadEntries(), Is.Empty);
+        });
+    }
+
+    [Test]
     public void GivenDueConnectedDriveCheckCapturePullsThenPushes()
     {
         using var home = new TempDirectory();
