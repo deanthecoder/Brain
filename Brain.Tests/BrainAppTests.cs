@@ -97,6 +97,28 @@ public sealed class BrainAppTests
     }
 
     [Test]
+    public void GivenDueAutomaticSyncCheckFeedbackIsShownOnce()
+    {
+        using var home = new TempDirectory();
+        var app = new BrainApp(new BrainStore(home), _ => new TestSynchroniser());
+
+        var error = RunError(app, ["A remembered thought"]);
+
+        Assert.That(error, Is.EqualTo("Syncing with Google Drive..." + Environment.NewLine));
+    }
+
+    [Test]
+    public void GivenReadOnlyCommandWithoutDuePullCheckSyncFeedbackIsNotShown()
+    {
+        using var home = new TempDirectory();
+        var app = new BrainApp(new BrainStore(home), _ => new TestSynchroniser { IsPullDue = false });
+
+        var error = RunError(app, ["recent"]);
+
+        Assert.That(error, Is.Empty);
+    }
+
+    [Test]
     public void GivenOfflineFlagCheckAutomaticSyncIsSkipped()
     {
         using var home = new TempDirectory();
@@ -383,6 +405,23 @@ public sealed class BrainAppTests
         finally
         {
             Console.SetOut(originalOut);
+        }
+
+        return output.ToString();
+    }
+
+    private static string RunError(BrainApp app, string[] args)
+    {
+        var originalError = Console.Error;
+        using var output = new StringWriter();
+        try
+        {
+            Console.SetError(output);
+            Assert.That(app.Run(args), Is.Zero);
+        }
+        finally
+        {
+            Console.SetError(originalError);
         }
 
         return output.ToString();

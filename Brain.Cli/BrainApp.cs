@@ -61,9 +61,14 @@ internal sealed class BrainApp
             var command = args[0].ToLowerInvariant();
             var synchroniser = m_syncFactory(m_store);
             var synchroniseAutomatically = !offline && command != "drive" && CanSynchroniseAutomatically(synchroniser);
+            var syncFeedbackShown = false;
 
             if (synchroniseAutomatically && synchroniser.IsPullDue)
+            {
+                ShowSyncFeedback();
+                syncFeedbackShown = true;
                 TryPull(synchroniser);
+            }
 
             var result = command switch
             {
@@ -85,7 +90,11 @@ internal sealed class BrainApp
             };
 
             if (synchroniseAutomatically && m_hasChanges)
+            {
+                if (!syncFeedbackShown)
+                    ShowSyncFeedback();
                 TryPush(synchroniser);
+            }
 
             return result;
         }
@@ -573,6 +582,8 @@ internal sealed class BrainApp
             Console.Error.WriteLine($"Google Drive sync pending: {ex.Message}");
         }
     }
+
+    private static void ShowSyncFeedback() => Console.Error.WriteLine("Syncing with Google Drive...");
 
     private static void TryPush(IBrainSynchroniser synchroniser)
     {

@@ -10,4 +10,5 @@
 
 using Brain.Cli;
 
+BrainUpdateChecker.NotifyIfAvailable(args);
 return new BrainApp().Run(args);
