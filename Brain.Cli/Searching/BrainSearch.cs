@@ -48,7 +48,12 @@ internal static class BrainSearch
             return entry.References.Contains(referenceFilter, StringComparer.OrdinalIgnoreCase) ? 100 : 0;
 
         if (urlFilter != null)
-            return entry.Urls.Any(x => x.Contains(urlFilter, StringComparison.OrdinalIgnoreCase)) ? 100 : 0;
+        {
+            if (entry.Urls.Any(x => x.Contains(urlFilter, StringComparison.OrdinalIgnoreCase)))
+                return 100;
+
+            return entry.Text.Contains(query, StringComparison.OrdinalIgnoreCase) ? 50 : 0;
+        }
 
         if (emailAddressFilter != null)
             return entry.EmailAddresses.Contains(emailAddressFilter, StringComparer.OrdinalIgnoreCase) ? 100 : 0;

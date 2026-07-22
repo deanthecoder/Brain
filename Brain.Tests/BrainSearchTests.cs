@@ -64,6 +64,18 @@ public sealed class BrainSearchTests
     }
 
     [Test]
+    public void GivenDottedCodeNameQueryCheckFullTextMatchesAreReturned()
+    {
+        var codeName = Entry("code", "Use DTC.Core for shared utilities");
+        var unrelatedUrl = Entry("url") with { Urls = ["example.core"] };
+
+        var matches = BrainSearch.Search([unrelatedUrl, codeName], "dtc.core").ToArray();
+
+        Assert.That(matches.Select(x => x.Entry.Id), Is.EqualTo(new[] { "code" }));
+        Assert.That(matches[0].Score, Is.EqualTo(50));
+    }
+
+    [Test]
     public void GivenExactEntryIdCheckOnlyThatEntryIsReturned()
     {
         var exact = Entry("abc123", "The matching entry");
